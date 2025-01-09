@@ -87,3 +87,26 @@ impl NaiveTask {
         }
     }
 }
+
+/// An `UpdateTask` requires an ID, and will be sent to the server to update 
+/// any specified fields associated with that ID.
+pub struct UpdateTask {
+    pub id: u8,
+    pub title: Option<String>,
+    pub deadline: Option<NaiveDateTime>,
+    pub duration: Option<Duration>,
+    pub priority: Option<Priority>,
+}
+
+impl UpdateTask {
+    /// Creates a new `UpdateTask` with the provided information.
+    pub fn new(id: u8, title: Option<String>, deadline: Option<NaiveDateTime>, duration: Option<Duration>, priority: Option<Priority>) -> Self {
+        Self {
+            id,
+            title,
+            deadline,
+            duration,
+            priority
+        }
+    }
+}
