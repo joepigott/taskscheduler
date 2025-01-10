@@ -99,15 +99,40 @@ pub struct UpdateTask {
 }
 
 impl UpdateTask {
-    /// Creates a new `UpdateTask` with the provided information.
-    pub fn new(id: u8, title: Option<String>, deadline: Option<NaiveDateTime>, duration: Option<Duration>, priority: Option<Priority>) -> Self {
+    /// Creates a new `UpdateTask` with the given ID. Use associated builder
+    /// methods to add information.
+    pub fn new(id: u8) -> Self {
         Self {
             id,
-            title,
-            deadline,
-            duration,
-            priority
+            title: None,
+            deadline: None,
+            duration: None,
+            priority: None,
         }
+    }
+
+    /// Adds a title to the `UpdateTask` and returns it.
+    pub fn with_title(mut self, title: String) -> Self {
+        self.title = Some(title);
+        self
+    }
+
+    /// Adds a deadline to the `UpdateTask` and returns it.
+    pub fn with_deadline(mut self, deadline: NaiveDateTime) -> Self {
+        self.deadline = Some(deadline);
+        self
+    }
+
+    /// Adds a duration to the `UpdateTask` and returns it.
+    pub fn with_duration(mut self, duration: Duration) -> Self {
+        self.duration = Some(duration);
+        self
+    }
+
+    /// Adds a priority to the `UpdateTask` and returns it.
+    pub fn with_priority(mut self, priority: Priority) -> Self {
+        self.priority = Some(priority);
+        self
     }
 }
 
@@ -205,5 +230,11 @@ impl TaskQueue {
         } else {
             None
         }
+    }
+}
+
+impl Default for TaskQueue {
+    fn default() -> Self {
+        Self::new()
     }
 }
