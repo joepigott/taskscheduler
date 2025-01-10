@@ -110,3 +110,100 @@ impl UpdateTask {
         }
     }
 }
+
+/// Possible options to determine the `TaskQueue` priority selection.
+pub enum QueuePriority {
+    /// Select the task with the closest deadline.
+    Deadline,
+
+    /// Select the task with the shortest remaining time.
+    ShortestDuration,
+
+    /// Select the task with the longest remaining time.
+    LongestDuration,
+
+    /// Select the task with the highest priority.
+    Priority,
+}
+
+/// A `TaskQueue` is a priority queue whose priority can be changed on the fly.
+/// Instead of ordering the tasks based on priority, the priority simply 
+/// changes the selection algorithm.
+pub struct TaskQueue {
+    data: Vec<Task>,
+    priority: QueuePriority,
+}
+
+impl TaskQueue {
+    /// Creates a new `TaskQueue` with the default priority of `Deadline`.
+    pub fn new() -> Self {
+        Self {
+            data: Vec::new(),
+            priority: QueuePriority::Deadline
+        }
+    }
+
+    /// Creates a new `TaskQueue` with the given queue priority.
+    pub fn with_priority(priority: QueuePriority) -> Self {
+        Self {
+            data: Vec::new(),
+            priority
+        }
+    }
+
+    /// Add a new `Task` to the queue.
+    pub fn add(&mut self, task: Task) {
+        self.data.push(task);
+    }
+
+    /// Remove a `Task` from the queue. Order of removal depends on the current
+    /// queue priority.
+    pub fn remove(&mut self) -> Option<Task> {
+        match self.priority {
+            QueuePriority::Deadline => self.remove_deadline(),
+            QueuePriority::ShortestDuration => self.remove_shortest_duration(),
+            QueuePriority::LongestDuration => self.remove_longest_duration(),
+            QueuePriority::Priority => self.remove_priority(),
+        }
+    }
+
+    /// Removes the task with the closest deadline.
+    fn remove_deadline(&mut self) -> Option<Task> {
+        if let Some((i, task)) = self.data.iter().enumerate().min_by_key(|(_, t)| t.deadline) {
+            println!("Removing task {} (\"{}\")", task.id, task.title);
+            Some(self.data.remove(i))
+        } else {
+            None
+        }
+    }
+
+    /// Removes the task with the shortest remaining duration.
+    fn remove_shortest_duration(&mut self) -> Option<Task> {
+        if let Some((i, task)) = self.data.iter().enumerate().min_by_key(|(_, t)| t.duration) {
+            println!("Removing task {} (\"{}\")", task.id, task.title);
+            Some(self.data.remove(i))
+        } else {
+            None
+        }
+    }
+
+    /// Removes the task with the longest remaining duration.
+    fn remove_longest_duration(&mut self) -> Option<Task> {
+        if let Some((i, task)) = self.data.iter().enumerate().max_by_key(|(_, t)| t.duration) {
+            println!("Removing task {} (\"{}\")", task.id, task.title);
+            Some(self.data.remove(i))
+        } else {
+            None
+        }
+    }
+
+    /// Removes the task with the highest priority (lowest value).
+    fn remove_priority(&mut self) -> Option<Task> {
+        if let Some((i, task)) = self.data.iter().enumerate().min_by_key(|(_, t)| t.priority) {
+            println!("Removing task {} (\"{}\")", task.id, task.title);
+            Some(self.data.remove(i))
+        } else {
+            None
+        }
+    }
+}
