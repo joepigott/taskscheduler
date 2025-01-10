@@ -4,6 +4,7 @@ type Priority = u8;
 
 /// `Task` contains information about a single task, including its ID, title,
 /// deadline, duration, and priority.
+#[derive(Clone)]
 pub struct Task {
     id: usize,
     pub title: String,
@@ -230,6 +231,37 @@ impl TaskQueue {
         } else {
             None
         }
+    }
+
+    /// Selects the next task without removing it from the queue. Order of
+    /// selection depends on the current queue priority.
+    pub fn peek(&self) -> Option<Task> {
+        match self.priority {
+            QueuePriority::Deadline => self.peek_deadline(),
+            QueuePriority::ShortestDuration => self.peek_shortest_duration(),
+            QueuePriority::LongestDuration => self.peek_longest_duration(),
+            QueuePriority::Priority => self.peek_priority(),
+        }
+    }
+
+    /// Peeks at the task with the closest deadline.
+    fn peek_deadline(&self) -> Option<Task> {
+        self.data.iter().min_by_key(|t| t.deadline).cloned()
+    }
+
+    /// Peeks at the task with the shortest remaining duration.
+    fn peek_shortest_duration(&self) -> Option<Task> {
+        self.data.iter().min_by_key(|t| t.duration).cloned()
+    }
+
+    /// Peeks at the task with the longest remaining duration.
+    fn peek_longest_duration(&self) -> Option<Task> {
+        self.data.iter().max_by_key(|t| t.duration).cloned()
+    }
+
+    /// Peeks at the task with the highest priority (lowest value).
+    fn peek_priority(&self) -> Option<Task> {
+        self.data.iter().min_by_key(|t| t.priority).cloned()
     }
 }
 
