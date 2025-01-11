@@ -1,7 +1,7 @@
 use crate::{NaiveTask, Task, TaskQueue};
+use crate::error::{SerializationError, IOError};
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
-use std::future::Future;
 use warp::Filter;
 
 pub type SharedQueue = Arc<Mutex<TaskQueue>>;
@@ -40,7 +40,7 @@ impl Server {
     }
 
     /// Spawn a new thread and begin listening for requests.
-    pub async fn run(&mut self) -> impl Future<Output = ()> {
+    pub async fn run(&mut self) {
         let tasks = Arc::clone(&self.tasks);
 
         let filter = warp::any().map(move || tasks.clone());
@@ -53,9 +53,16 @@ impl Server {
             .and(filter.clone())
             .and_then(Self::add_task);
 
-        let routes = post;
+        let get = warp::get()
+            .and(warp::path("v1"))
+            .and(warp::path("tasks"))
+            .and(warp::path::end())
+            .and(filter.clone())
+            .and_then(Self::get_tasks);
 
-        warp::serve(routes).run(([127, 0, 0, 1], 3030))
+        let routes = post.or(get);
+
+        warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
     }
 
     fn post_json() -> impl Filter<Extract = (NaiveTask,), Error = warp::Rejection> + Clone {
@@ -66,13 +73,41 @@ impl Server {
         task: NaiveTask,
         queue: SharedQueue,
     ) -> Result<impl warp::Reply, warp::Rejection> {
-        let mut queue = queue.lock().unwrap();
-        let task = Task::from_naive_task(task, queue.new_id());
+        let mut queue = match queue.lock() {
+            Ok(queue) => queue,
+            Err(e) => {
+                eprintln!("{e}");
+                return Err(warp::reject::custom(IOError));
+            }
+        };
+
+        let task = Task::from_naive(task, queue.new_id());
         queue.add(task);
 
         Ok(warp::reply::with_status(
             "Item successfully added",
             warp::http::StatusCode::CREATED,
         ))
+    }
+
+    async fn get_tasks(queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
+        let queue = match queue.lock() {
+            Ok(queue) => queue,
+            Err(e) => {
+                eprintln!("{e}");
+                return Err(warp::reject::custom(IOError));
+            }
+        };
+
+        match bincode::serialize(&queue.clone()) {
+            Ok(data) => Ok(warp::reply::with_status(
+                data,
+                warp::http::StatusCode::OK
+            )),
+            Err(e) => {
+                eprintln!("{e}");
+                Err(warp::reject::custom(SerializationError))
+            }
+        }
     }
 }

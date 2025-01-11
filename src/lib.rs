@@ -2,6 +2,7 @@ use chrono::{Duration, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 
 pub mod server;
+pub mod error;
 
 type Priority = u8;
 
@@ -37,7 +38,7 @@ impl Task {
     }
 
     /// Creates a new `Task` from an existing `NaiveTask` and an ID.
-    pub fn from_naive_task(task: NaiveTask, id: usize) -> Self {
+    pub fn from_naive(task: NaiveTask, id: usize) -> Self {
         Self {
             id,
             title: task.title,
@@ -142,7 +143,7 @@ impl UpdateTask {
 }
 
 /// Possible options to determine the `TaskQueue` priority selection.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum QueuePriority {
     /// Select the task with the closest deadline.
     Deadline,
@@ -160,7 +161,7 @@ pub enum QueuePriority {
 /// A `TaskQueue` is a priority queue whose priority can be changed on the fly.
 /// Instead of ordering the tasks based on priority, the priority simply
 /// changes the selection algorithm.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct TaskQueue {
     data: Vec<Task>,
     priority: QueuePriority,
