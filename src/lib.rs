@@ -1,4 +1,5 @@
 use chrono::{Duration, NaiveDateTime};
+use serde::{Deserialize, Serialize};
 
 pub mod server;
 
@@ -6,7 +7,7 @@ type Priority = u8;
 
 /// `Task` contains information about a single task, including its ID, title,
 /// deadline, duration, and priority.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Task {
     id: usize,
     pub title: String,
@@ -67,6 +68,7 @@ impl std::fmt::Display for Task {
 /// and an active flag. This is useful when the client sends task information
 /// and the server is responsible for assigning it an ID depending on the tasks
 /// already in the queue.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NaiveTask {
     pub title: String,
     pub deadline: NaiveDateTime,
@@ -91,7 +93,7 @@ impl NaiveTask {
     }
 }
 
-/// An `UpdateTask` requires an ID, and will be sent to the server to update 
+/// An `UpdateTask` requires an ID, and will be sent to the server to update
 /// any specified fields associated with that ID.
 pub struct UpdateTask {
     pub id: u8,
@@ -140,6 +142,7 @@ impl UpdateTask {
 }
 
 /// Possible options to determine the `TaskQueue` priority selection.
+#[derive(Clone)]
 pub enum QueuePriority {
     /// Select the task with the closest deadline.
     Deadline,
@@ -155,8 +158,9 @@ pub enum QueuePriority {
 }
 
 /// A `TaskQueue` is a priority queue whose priority can be changed on the fly.
-/// Instead of ordering the tasks based on priority, the priority simply 
+/// Instead of ordering the tasks based on priority, the priority simply
 /// changes the selection algorithm.
+#[derive(Clone)]
 pub struct TaskQueue {
     data: Vec<Task>,
     priority: QueuePriority,
@@ -167,7 +171,7 @@ impl TaskQueue {
     pub fn new() -> Self {
         Self {
             data: Vec::new(),
-            priority: QueuePriority::Deadline
+            priority: QueuePriority::Deadline,
         }
     }
 
@@ -175,7 +179,23 @@ impl TaskQueue {
     pub fn with_priority(priority: QueuePriority) -> Self {
         Self {
             data: Vec::new(),
-            priority
+            priority,
+        }
+    }
+
+    /// Finds and returns the lowest unused ID.
+    pub fn new_id(&self) -> usize {
+        use std::collections::HashSet;
+
+        let ids: HashSet<usize> = self.data.iter().map(|t| t.id).collect();
+        (1..).find(|id| !ids.contains(id)).unwrap()
+    }
+
+    /// Returns an iterator over the contents of the queue.
+    pub fn iter(&self) -> TaskQueueIterator {
+        TaskQueueIterator {
+            task_queue: &self,
+            index: 0,
         }
     }
 
@@ -270,5 +290,63 @@ impl TaskQueue {
 impl Default for TaskQueue {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Implements `Iterator` for easy iteration over a `TaskQueue`.
+pub struct TaskQueueIterator<'a> {
+    task_queue: &'a TaskQueue,
+    index: usize,
+}
+
+impl<'a> Iterator for TaskQueueIterator<'a> {
+    type Item = &'a Task;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.task_queue.data.len() {
+            let result = &self.task_queue.data[self.index];
+            self.index += 1;
+            return Some(result);
+        } else {
+            return None;
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_new_id() {
+        let mut queue = TaskQueue::new();
+        for i in 1..=10 {
+            let task = Task::new(
+                i,
+                format!("Task {i}"),
+                NaiveDateTime::parse_from_str("01/10/2025 01:00 am", "%m/%d/%Y %M:%H %P").unwrap(),
+                Duration::zero(),
+                1,
+            );
+            queue.add(task);
+        }
+
+        {
+            let queue1 = queue.clone();
+            assert_eq!(queue1.new_id(), 11);
+        }
+
+        {
+            let mut queue1 = queue.clone();
+            queue1.data.remove(2);
+            assert_eq!(queue1.new_id(), 3);
+        }
+
+        {
+            let mut queue1 = queue.clone();
+            queue1.data.remove(3);
+            queue1.data.remove(6);
+            assert_eq!(queue1.new_id(), 4);
+        }
     }
 }
