@@ -1,8 +1,8 @@
 use chrono::{Duration, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 
-pub mod server;
 pub mod error;
+pub mod server;
 
 type Priority = u8;
 

@@ -1,5 +1,5 @@
-use crate::{NaiveTask, Task, UpdateTask, TaskQueue};
-use crate::error::{SerializationError, IOError};
+use crate::error::{IOError, SerializationError};
+use crate::{NaiveTask, Task, TaskQueue, UpdateTask};
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use warp::Filter;
@@ -112,10 +112,7 @@ impl Server {
         let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
 
         match bincode::serialize(&queue.clone()) {
-            Ok(data) => Ok(warp::reply::with_status(
-                data,
-                warp::http::StatusCode::OK
-            )),
+            Ok(data) => Ok(warp::reply::with_status(data, warp::http::StatusCode::OK)),
             Err(e) => {
                 eprintln!("{e}");
                 Err(warp::reject::custom(SerializationError))
@@ -123,7 +120,10 @@ impl Server {
         }
     }
 
-    async fn update_task(updates: UpdateTask, queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
+    async fn update_task(
+        updates: UpdateTask,
+        queue: SharedQueue,
+    ) -> Result<impl warp::Reply, warp::Rejection> {
         let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
         let task = match queue.get_mut(updates.id) {
             Some(task) => task,
@@ -154,7 +154,10 @@ impl Server {
         ))
     }
 
-    async fn delete_task(id: usize, queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
+    async fn delete_task(
+        id: usize,
+        queue: SharedQueue,
+    ) -> Result<impl warp::Reply, warp::Rejection> {
         let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
 
         queue.delete(id)?;
