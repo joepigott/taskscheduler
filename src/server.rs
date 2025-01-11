@@ -1,4 +1,4 @@
-use crate::{NaiveTask, Task, TaskQueue};
+use crate::{NaiveTask, Task, UpdateTask, TaskQueue};
 use crate::error::{SerializationError, IOError};
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
@@ -60,7 +60,23 @@ impl Server {
             .and(filter.clone())
             .and_then(Self::get_tasks);
 
-        let routes = post.or(get);
+        let put = warp::put()
+            .and(warp::path("v1"))
+            .and(warp::path("tasks"))
+            .and(warp::path::end())
+            .and(Self::put_json())
+            .and(filter.clone())
+            .and_then(Self::update_task);
+
+        let delete = warp::delete()
+            .and(warp::path("v1"))
+            .and(warp::path("tasks"))
+            .and(warp::path::end())
+            .and(Self::delete_json())
+            .and(filter.clone())
+            .and_then(Self::delete_task);
+
+        let routes = post.or(get).or(put).or(delete);
 
         warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
     }
@@ -69,17 +85,19 @@ impl Server {
         warp::body::content_length_limit(1024 * 16).and(warp::body::json())
     }
 
+    fn put_json() -> impl Filter<Extract = (UpdateTask,), Error = warp::Rejection> + Clone {
+        warp::body::content_length_limit(1024 * 16).and(warp::body::json())
+    }
+
+    fn delete_json() -> impl Filter<Extract = (usize,), Error = warp::Rejection> + Clone {
+        warp::body::content_length_limit(1024 * 16).and(warp::body::json())
+    }
+
     async fn add_task(
         task: NaiveTask,
         queue: SharedQueue,
     ) -> Result<impl warp::Reply, warp::Rejection> {
-        let mut queue = match queue.lock() {
-            Ok(queue) => queue,
-            Err(e) => {
-                eprintln!("{e}");
-                return Err(warp::reject::custom(IOError));
-            }
-        };
+        let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
 
         let task = Task::from_naive(task, queue.new_id());
         queue.add(task);
@@ -91,13 +109,7 @@ impl Server {
     }
 
     async fn get_tasks(queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
-        let queue = match queue.lock() {
-            Ok(queue) => queue,
-            Err(e) => {
-                eprintln!("{e}");
-                return Err(warp::reject::custom(IOError));
-            }
-        };
+        let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
 
         match bincode::serialize(&queue.clone()) {
             Ok(data) => Ok(warp::reply::with_status(
@@ -109,5 +121,47 @@ impl Server {
                 Err(warp::reject::custom(SerializationError))
             }
         }
+    }
+
+    async fn update_task(updates: UpdateTask, queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
+        let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
+        let task = match queue.get_mut(updates.id) {
+            Some(task) => task,
+            None => {
+                eprintln!("Task {} does not exist", updates.id);
+                return Err(warp::reject::reject());
+            }
+        };
+
+        // update existing fields
+
+        if let Some(title) = updates.title {
+            task.title = title;
+        }
+        if let Some(deadline) = updates.deadline {
+            task.deadline = deadline;
+        }
+        if let Some(duration) = updates.duration {
+            task.duration = duration;
+        }
+        if let Some(priority) = updates.priority {
+            task.priority = priority;
+        }
+
+        Ok(warp::reply::with_status(
+            "Item successfully updated",
+            warp::http::StatusCode::CREATED,
+        ))
+    }
+
+    async fn delete_task(id: usize, queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
+        let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
+
+        queue.delete(id)?;
+
+        Ok(warp::reply::with_status(
+            "Item successfully deleted",
+            warp::http::StatusCode::OK,
+        ))
     }
 }

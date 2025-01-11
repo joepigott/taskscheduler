@@ -33,3 +33,20 @@ impl Debug for IOError {
 
 impl warp::reject::Reject for IOError {}
 impl std::error::Error for IOError {}
+
+pub struct TaskNotFound;
+
+impl Display for TaskNotFound {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "The requested task does not exist")
+    }
+}
+
+impl Debug for TaskNotFound {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "The requested task does not exist")
+    }
+}
+
+impl std::error::Error for TaskNotFound {}
+impl warp::reject::Reject for TaskNotFound {}

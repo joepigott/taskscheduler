@@ -96,8 +96,9 @@ impl NaiveTask {
 
 /// An `UpdateTask` requires an ID, and will be sent to the server to update
 /// any specified fields associated with that ID.
+#[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateTask {
-    pub id: u8,
+    pub id: usize,
     pub title: Option<String>,
     pub deadline: Option<NaiveDateTime>,
     pub duration: Option<Duration>,
@@ -107,7 +108,7 @@ pub struct UpdateTask {
 impl UpdateTask {
     /// Creates a new `UpdateTask` with the given ID. Use associated builder
     /// methods to add information.
-    pub fn new(id: u8) -> Self {
+    pub fn new(id: usize) -> Self {
         Self {
             id,
             title: None,
@@ -195,7 +196,7 @@ impl TaskQueue {
     /// Returns an iterator over the contents of the queue.
     pub fn iter(&self) -> TaskQueueIterator {
         TaskQueueIterator {
-            task_queue: &self,
+            task_queue: self,
             index: 0,
         }
     }
@@ -286,6 +287,19 @@ impl TaskQueue {
     fn peek_priority(&self) -> Option<Task> {
         self.data.iter().min_by_key(|t| t.priority).cloned()
     }
+
+    pub fn get_mut(&mut self, id: usize) -> Option<&mut Task> {
+        self.data.iter_mut().find(|t| t.id == id)
+    }
+
+    pub fn delete(&mut self, id: usize) -> Result<(), error::TaskNotFound> {
+        if let Some((i, _)) = self.data.iter().enumerate().find(|(_, t)| t.id == id) {
+            self.data.remove(i);
+            Ok(())
+        } else {
+            Err(error::TaskNotFound)
+        }
+    }
 }
 
 impl Default for TaskQueue {
@@ -307,9 +321,10 @@ impl<'a> Iterator for TaskQueueIterator<'a> {
         if self.index < self.task_queue.data.len() {
             let result = &self.task_queue.data[self.index];
             self.index += 1;
-            return Some(result);
+
+            Some(result)
         } else {
-            return None;
+            None
         }
     }
 }
