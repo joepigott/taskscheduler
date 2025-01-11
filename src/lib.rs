@@ -288,10 +288,13 @@ impl TaskQueue {
         self.data.iter().min_by_key(|t| t.priority).cloned()
     }
 
+    /// Returns a mutable reference to 
     pub fn get_mut(&mut self, id: usize) -> Option<&mut Task> {
         self.data.iter_mut().find(|t| t.id == id)
     }
 
+    /// Deletes the task corresponding to the given ID from the queue. If the
+    /// task does not exist, a `TaskNotFound` error is returned.
     pub fn delete(&mut self, id: usize) -> Result<(), error::TaskNotFound> {
         if let Some((i, _)) = self.data.iter().enumerate().find(|(_, t)| t.id == id) {
             self.data.remove(i);

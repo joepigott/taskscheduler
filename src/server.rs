@@ -81,18 +81,23 @@ impl Server {
         warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
     }
 
+    /// Extracts a `NaiveTask` from a `POST` request
     fn post_json() -> impl Filter<Extract = (NaiveTask,), Error = warp::Rejection> + Clone {
         warp::body::content_length_limit(1024 * 16).and(warp::body::json())
     }
 
+    /// Extracts an `UpdateTask` from a `PUT` request
     fn put_json() -> impl Filter<Extract = (UpdateTask,), Error = warp::Rejection> + Clone {
         warp::body::content_length_limit(1024 * 16).and(warp::body::json())
     }
 
+    /// Extracts an ID as a `usize` from a `DELETE` request
     fn delete_json() -> impl Filter<Extract = (usize,), Error = warp::Rejection> + Clone {
         warp::body::content_length_limit(1024 * 16).and(warp::body::json())
     }
 
+    /// Adds a task to the queue. A successful operation will reply with a 200 
+    /// OK status.
     async fn add_task(
         task: NaiveTask,
         queue: SharedQueue,
@@ -108,6 +113,9 @@ impl Server {
         ))
     }
 
+    /// Replies with a serialized representation of the entire contents of the
+    /// queue. A successful operation will respond with the requested data 
+    /// along with a 200 OK status.
     async fn get_tasks(queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
         let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
 
@@ -120,6 +128,8 @@ impl Server {
         }
     }
 
+    /// Updates a task in the queue. A successful operation will reply with a
+    /// 200 OK status.
     async fn update_task(
         updates: UpdateTask,
         queue: SharedQueue,
@@ -154,6 +164,8 @@ impl Server {
         ))
     }
 
+    /// Deletes a task from the queue. A successful operation will reply with a
+    /// 200 OK status.
     async fn delete_task(
         id: usize,
         queue: SharedQueue,
