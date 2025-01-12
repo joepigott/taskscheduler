@@ -2,9 +2,9 @@ use crate::Task;
 use serde::{Deserialize, Serialize};
 
 #[typetag::serde(tag = "type")]
-pub trait Priority {
+pub trait Priority: Send + Sync {
     fn pop(&self, queue: &mut Vec<Task>) -> Option<Task>;
-    fn peek(&self, queue: &Vec<Task>) -> Option<Task>;
+    fn peek(&self, queue: &[Task]) -> Option<Task>;
     fn clone_box(&self) -> Box<dyn Priority>;
 }
 
@@ -15,15 +15,15 @@ pub struct FIFO;
 #[typetag::serde]
 impl Priority for FIFO {
     fn pop(&self, queue: &mut Vec<Task>) -> Option<Task> {
-        if queue.len() > 0 {
+        if !queue.is_empty() {
             Some(queue.remove(0))
         } else {
             None
         }
     }
 
-    fn peek(&self, queue: &Vec<Task>) -> Option<Task> {
-        queue.get(0).cloned()
+    fn peek(&self, queue: &[Task]) -> Option<Task> {
+        queue.first().cloned()
     }
 
     fn clone_box(&self) -> Box<dyn Priority> {
@@ -45,7 +45,7 @@ impl Priority for Deadline {
         }
     }
 
-    fn peek(&self, queue: &Vec<Task>) -> Option<Task> {
+    fn peek(&self, queue: &[Task]) -> Option<Task> {
         queue.iter().min_by_key(|t| t.deadline).cloned()
     }
 
@@ -69,7 +69,7 @@ impl Priority for Shortest {
         }
     }
 
-    fn peek(&self, queue: &Vec<Task>) -> Option<Task> {
+    fn peek(&self, queue: &[Task]) -> Option<Task> {
         queue.iter().min_by_key(|t| t.duration).cloned()
     }
 
@@ -93,7 +93,7 @@ impl Priority for Longest {
         }
     }
 
-    fn peek(&self, queue: &Vec<Task>) -> Option<Task> {
+    fn peek(&self, queue: &[Task]) -> Option<Task> {
         queue.iter().max_by_key(|t| t.duration).cloned()
     }
 
@@ -117,7 +117,7 @@ impl Priority for HighestPriority {
         }
     }
 
-    fn peek(&self, queue: &Vec<Task>) -> Option<Task> {
+    fn peek(&self, queue: &[Task]) -> Option<Task> {
         queue.iter().min_by_key(|t| t.priority).cloned()
     }
 
@@ -143,7 +143,7 @@ impl Priority for LowestPriority {
         }
     }
 
-    fn peek(&self, queue: &Vec<Task>) -> Option<Task> {
+    fn peek(&self, queue: &[Task]) -> Option<Task> {
         queue.iter().max_by_key(|t| t.priority).cloned()
     }
 
