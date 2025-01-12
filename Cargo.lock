@@ -126,6 +126,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "color"
+version = "0.2.0"
+
+[[package]]
 name = "core-foundation-sys"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -710,6 +714,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
 
 [[package]]
+name = "piglog"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "color",
+]
+
+[[package]]
 name = "pin-project"
 version = "1.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -948,6 +960,7 @@ version = "0.1.0"
 dependencies = [
  "bincode",
  "chrono",
+ "piglog",
  "serde",
  "typetag",
  "warp",

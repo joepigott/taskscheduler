@@ -1,16 +1,17 @@
-use crate::error::{IOError, SerializationError};
+use crate::error::{IOError, SerializationError, SchedulingError};
 use crate::{NaiveTask, Task, TaskQueue, UpdateTask};
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
+use piglog::info;
 use warp::Filter;
 
 pub type SharedQueue = Arc<Mutex<TaskQueue>>;
 
 /// `Scheduler` handles all task scheduling logic. It will update the active
-/// task based on the queue priority on a fixed timeout. `Scheduler` contains
-/// the `sigterm` field, which is an `AtomicBool` that should be set to `true`
-/// when the program is meant to exit.
+/// task based on the queue priority on a fixed timeout.
 pub struct Scheduler {
     tasks: SharedQueue,
+    active: bool,
 }
 
 impl Scheduler {
@@ -18,7 +19,22 @@ impl Scheduler {
     pub fn with_queue(queue: SharedQueue) -> Self {
         Self {
             tasks: Arc::clone(&queue),
+            active: false,
         }
+    }
+
+    /// Updates the scheduling logic on a timed loop. The `sigterm` parameter
+    /// should be set to `true` when the program exits, at which point all data
+    /// will be serialized and written to disk.
+    pub async fn run(&mut self, sigterm: AtomicBool) -> Result<(), SchedulingError> {
+        while !sigterm.load(Ordering::Relaxed) && self.active {
+            let mut queue = self.tasks.lock()?;
+            if let Some(active_task) = queue.pop() {
+                info!("Active task: {}", active_task.title);
+            }
+        }
+
+        Ok(())
     }
 }
 
