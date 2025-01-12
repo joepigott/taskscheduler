@@ -1,10 +1,10 @@
 use chrono::{Duration, NaiveDateTime};
+use priority::{Deadline, Priority};
 use serde::{Deserialize, Serialize};
 
 pub mod error;
+pub mod priority;
 pub mod server;
-
-type Priority = u8;
 
 /// `Task` contains information about a single task, including its ID, title,
 /// deadline, duration, and priority.
@@ -14,7 +14,7 @@ pub struct Task {
     pub title: String,
     pub deadline: NaiveDateTime,
     pub duration: Duration,
-    pub priority: Priority,
+    pub priority: u8,
     pub active: bool,
 }
 
@@ -25,7 +25,7 @@ impl Task {
         title: String,
         deadline: NaiveDateTime,
         duration: Duration,
-        priority: Priority,
+        priority: u8,
     ) -> Self {
         Self {
             id,
@@ -74,17 +74,12 @@ pub struct NaiveTask {
     pub title: String,
     pub deadline: NaiveDateTime,
     pub duration: Duration,
-    pub priority: Priority,
+    pub priority: u8,
 }
 
 impl NaiveTask {
     /// Creates a new `NaiveTask` with the provided information.
-    pub fn new(
-        title: String,
-        deadline: NaiveDateTime,
-        duration: Duration,
-        priority: Priority,
-    ) -> Self {
+    pub fn new(title: String, deadline: NaiveDateTime, duration: Duration, priority: u8) -> Self {
         Self {
             title,
             deadline,
@@ -102,7 +97,7 @@ pub struct UpdateTask {
     pub title: Option<String>,
     pub deadline: Option<NaiveDateTime>,
     pub duration: Option<Duration>,
-    pub priority: Option<Priority>,
+    pub priority: Option<u8>,
 }
 
 impl UpdateTask {
@@ -137,26 +132,10 @@ impl UpdateTask {
     }
 
     /// Adds a priority to the `UpdateTask` and returns it.
-    pub fn with_priority(mut self, priority: Priority) -> Self {
+    pub fn with_priority(mut self, priority: u8) -> Self {
         self.priority = Some(priority);
         self
     }
-}
-
-/// Possible options to determine the `TaskQueue` priority selection.
-#[derive(Clone, Serialize, Deserialize)]
-pub enum QueuePriority {
-    /// Select the task with the closest deadline.
-    Deadline,
-
-    /// Select the task with the shortest remaining time.
-    ShortestDuration,
-
-    /// Select the task with the longest remaining time.
-    LongestDuration,
-
-    /// Select the task with the highest priority.
-    Priority,
 }
 
 /// A `TaskQueue` is a priority queue whose priority can be changed on the fly.
@@ -165,7 +144,7 @@ pub enum QueuePriority {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct TaskQueue {
     data: Vec<Task>,
-    priority: QueuePriority,
+    priority: Box<dyn Priority>,
 }
 
 impl TaskQueue {
@@ -173,15 +152,15 @@ impl TaskQueue {
     pub fn new() -> Self {
         Self {
             data: Vec::new(),
-            priority: QueuePriority::Deadline,
+            priority: Box::new(Deadline {}),
         }
     }
 
     /// Creates a new `TaskQueue` with the given queue priority.
-    pub fn with_priority(priority: QueuePriority) -> Self {
+    pub fn with_priority<P: Priority + 'static>(priority: P) -> Self {
         Self {
             data: Vec::new(),
-            priority,
+            priority: Box::new(priority),
         }
     }
 
@@ -206,89 +185,34 @@ impl TaskQueue {
         self.data.push(task);
     }
 
-    /// Remove a `Task` from the queue. Order of removal depends on the current
+    /// Pop a `Task` from the queue. Order of removal depends on the current
     /// queue priority.
-    pub fn remove(&mut self) -> Option<Task> {
-        match self.priority {
-            QueuePriority::Deadline => self.remove_deadline(),
-            QueuePriority::ShortestDuration => self.remove_shortest_duration(),
-            QueuePriority::LongestDuration => self.remove_longest_duration(),
-            QueuePriority::Priority => self.remove_priority(),
-        }
+    pub fn pop(&mut self) -> Option<Task> {
+        self.priority.pop(&mut self.data)
     }
 
-    /// Removes the task with the closest deadline.
-    fn remove_deadline(&mut self) -> Option<Task> {
-        if let Some((i, task)) = self.data.iter().enumerate().min_by_key(|(_, t)| t.deadline) {
-            println!("Removing task {} (\"{}\")", task.id, task.title);
-            Some(self.data.remove(i))
-        } else {
-            None
-        }
-    }
-
-    /// Removes the task with the shortest remaining duration.
-    fn remove_shortest_duration(&mut self) -> Option<Task> {
-        if let Some((i, task)) = self.data.iter().enumerate().min_by_key(|(_, t)| t.duration) {
-            println!("Removing task {} (\"{}\")", task.id, task.title);
-            Some(self.data.remove(i))
-        } else {
-            None
-        }
-    }
-
-    /// Removes the task with the longest remaining duration.
-    fn remove_longest_duration(&mut self) -> Option<Task> {
-        if let Some((i, task)) = self.data.iter().enumerate().max_by_key(|(_, t)| t.duration) {
-            println!("Removing task {} (\"{}\")", task.id, task.title);
-            Some(self.data.remove(i))
-        } else {
-            None
-        }
-    }
-
-    /// Removes the task with the highest priority (lowest value).
-    fn remove_priority(&mut self) -> Option<Task> {
-        if let Some((i, task)) = self.data.iter().enumerate().min_by_key(|(_, t)| t.priority) {
-            println!("Removing task {} (\"{}\")", task.id, task.title);
-            Some(self.data.remove(i))
-        } else {
-            None
-        }
-    }
-
-    /// Selects the next task without removing it from the queue. Order of
-    /// selection depends on the current queue priority.
+    /// Returns the `Task` that would be popped from the queue *without*
+    /// removing it. The `Task` is cloned, not a reference.
     pub fn peek(&self) -> Option<Task> {
-        match self.priority {
-            QueuePriority::Deadline => self.peek_deadline(),
-            QueuePriority::ShortestDuration => self.peek_shortest_duration(),
-            QueuePriority::LongestDuration => self.peek_longest_duration(),
-            QueuePriority::Priority => self.peek_priority(),
+        self.priority.peek(&self.data)
+    }
+
+    /// Remove the `i`th task from the queue.
+    pub fn remove(&mut self, i: usize) -> Option<Task> {
+        if i < self.data.len() {
+            Some(self.data.remove(i))
+        } else {
+            None
         }
     }
 
-    /// Peeks at the task with the closest deadline.
-    fn peek_deadline(&self) -> Option<Task> {
-        self.data.iter().min_by_key(|t| t.deadline).cloned()
+    /// Returns a reference to the `i`th task *without* removing it from the
+    /// queue.
+    pub fn nth(&self, i: usize) -> Option<&Task> {
+        self.data.get(i)
     }
 
-    /// Peeks at the task with the shortest remaining duration.
-    fn peek_shortest_duration(&self) -> Option<Task> {
-        self.data.iter().min_by_key(|t| t.duration).cloned()
-    }
-
-    /// Peeks at the task with the longest remaining duration.
-    fn peek_longest_duration(&self) -> Option<Task> {
-        self.data.iter().max_by_key(|t| t.duration).cloned()
-    }
-
-    /// Peeks at the task with the highest priority (lowest value).
-    fn peek_priority(&self) -> Option<Task> {
-        self.data.iter().min_by_key(|t| t.priority).cloned()
-    }
-
-    /// Returns a mutable reference to 
+    /// Returns a mutable reference to the task corresponding to the given ID.
     pub fn get_mut(&mut self, id: usize) -> Option<&mut Task> {
         self.data.iter_mut().find(|t| t.id == id)
     }

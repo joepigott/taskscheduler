@@ -93,7 +93,7 @@ impl Server {
         warp::body::content_length_limit(1024 * 16).and(warp::body::json())
     }
 
-    /// Adds a task to the queue. A successful operation will reply with a 200 
+    /// Adds a task to the queue. A successful operation will reply with a 200
     /// OK status.
     async fn add_task(
         task: NaiveTask,
@@ -111,7 +111,7 @@ impl Server {
     }
 
     /// Replies with a serialized representation of the entire contents of the
-    /// queue. A successful operation will respond with the requested data 
+    /// queue. A successful operation will respond with the requested data
     /// along with a 200 OK status.
     async fn get_tasks(queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
         let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
