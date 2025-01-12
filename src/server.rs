@@ -1,6 +1,5 @@
 use crate::error::{IOError, SerializationError};
 use crate::{NaiveTask, Task, TaskQueue, UpdateTask};
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use warp::Filter;
 
@@ -12,15 +11,13 @@ pub type SharedQueue = Arc<Mutex<TaskQueue>>;
 /// when the program is meant to exit.
 pub struct Scheduler {
     tasks: SharedQueue,
-    sigterm: Arc<AtomicBool>,
 }
 
 impl Scheduler {
-    /// Creates a new `Scheduler` with the given sigterm and task queue.
-    pub fn with_queue(queue: SharedQueue, sigterm: Arc<AtomicBool>) -> Self {
+    /// Creates a new `Scheduler` with the given task queue.
+    pub fn with_queue(queue: SharedQueue) -> Self {
         Self {
             tasks: Arc::clone(&queue),
-            sigterm: Arc::clone(&sigterm),
         }
     }
 }
@@ -32,7 +29,7 @@ pub struct Server {
 }
 
 impl Server {
-    /// Creates a new `Server` with the given sigterm and task queue.
+    /// Creates a new `Server` with the given task queue.
     pub fn with_queue(queue: SharedQueue) -> Self {
         Self {
             tasks: Arc::clone(&queue),
