@@ -145,6 +145,7 @@ impl UpdateTask {
 pub struct TaskQueue {
     data: Vec<Task>,
     priority: Box<dyn Priority>,
+    pub enabled: bool,
 }
 
 impl TaskQueue {
@@ -153,6 +154,7 @@ impl TaskQueue {
         Self {
             data: Vec::new(),
             priority: Box::new(Deadline {}),
+            enabled: false,
         }
     }
 
@@ -161,6 +163,7 @@ impl TaskQueue {
         Self {
             data: Vec::new(),
             priority: Box::new(priority),
+            enabled: false,
         }
     }
 

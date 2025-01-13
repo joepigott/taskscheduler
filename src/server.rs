@@ -2,7 +2,7 @@ use crate::error::{IOError, SerializationError, SchedulingError};
 use crate::{NaiveTask, Task, TaskQueue, UpdateTask};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
-use piglog::info;
+use piglog::error;
 use warp::Filter;
 
 pub type SharedQueue = Arc<Mutex<TaskQueue>>;
@@ -11,7 +11,7 @@ pub type SharedQueue = Arc<Mutex<TaskQueue>>;
 /// task based on the queue priority on a fixed timeout.
 pub struct Scheduler {
     tasks: SharedQueue,
-    active: bool,
+    active_task: Option<Task>,
 }
 
 impl Scheduler {
@@ -19,7 +19,7 @@ impl Scheduler {
     pub fn with_queue(queue: SharedQueue) -> Self {
         Self {
             tasks: Arc::clone(&queue),
-            active: false,
+            active_task: None,
         }
     }
 
@@ -27,11 +27,12 @@ impl Scheduler {
     /// should be set to `true` when the program exits, at which point all data
     /// will be serialized and written to disk.
     pub async fn run(&mut self, sigterm: AtomicBool) -> Result<(), SchedulingError> {
-        while !sigterm.load(Ordering::Relaxed) && self.active {
-            let mut queue = self.tasks.lock()?;
-            if let Some(active_task) = queue.pop() {
-                info!("Active task: {}", active_task.title);
+        while !sigterm.load(Ordering::Relaxed) {
+            let queue = self.tasks.lock()?;
+            if queue.enabled {
+                unimplemented!()
             }
+            std::thread::sleep(std::time::Duration::from_secs(5));
         }
 
         Ok(())
@@ -89,7 +90,23 @@ impl Server {
             .and(filter.clone())
             .and_then(Self::delete_task);
 
-        let routes = post.or(get).or(put).or(delete);
+        let enable = warp::post()
+            .and(warp::path("v1"))
+            .and(warp::path("tasks"))
+            .and(warp::path("enable"))
+            .and(warp::path::end())
+            .and(filter.clone())
+            .and_then(Self::enable);
+
+        let disable = warp::post()
+            .and(warp::path("v1"))
+            .and(warp::path("tasks"))
+            .and(warp::path("disable"))
+            .and(warp::path::end())
+            .and(filter.clone())
+            .and_then(Self::disable);
+
+        let routes = post.or(get).or(put).or(delete).or(enable).or(disable);
 
         warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
     }
@@ -135,7 +152,7 @@ impl Server {
         match bincode::serialize(&queue.clone()) {
             Ok(data) => Ok(warp::reply::with_status(data, warp::http::StatusCode::OK)),
             Err(e) => {
-                eprintln!("{e}");
+                error!("{e}");
                 Err(warp::reject::custom(SerializationError))
             }
         }
@@ -151,7 +168,7 @@ impl Server {
         let task = match queue.get_mut(updates.id) {
             Some(task) => task,
             None => {
-                eprintln!("Task {} does not exist", updates.id);
+                error!("Task {} does not exist", updates.id);
                 return Err(warp::reject::reject());
             }
         };
@@ -190,6 +207,30 @@ impl Server {
         Ok(warp::reply::with_status(
             "Item successfully deleted",
             warp::http::StatusCode::OK,
+        ))
+    }
+
+    /// Enables the scheduler, which will start executing scheduling logic.
+    async fn enable(queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
+        let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
+
+        queue.enabled = true;
+
+        Ok(warp::reply::with_status(
+            "Scheduler successfully enabled",
+            warp::http::StatusCode::OK
+        ))
+    }
+
+    /// Disables the scheduler, which will stop executing scheduling logic.
+    async fn disable(queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
+        let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
+
+        queue.enabled = false;
+
+        Ok(warp::reply::with_status(
+            "Scheduler successfully disabled",
+            warp::http::StatusCode::OK
         ))
     }
 }
