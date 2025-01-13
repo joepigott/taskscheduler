@@ -1,6 +1,43 @@
 use crate::Task;
 use serde::{Deserialize, Serialize};
 
+/// A struct implementing the `Priority` trait can be assigned to a `TaskQueue`
+/// to define the method for selecting tasks.
+///
+/// ## Example: `FIFO`
+///
+/// ```rust
+/// pub struct FIFO {}
+///
+/// impl Priority for FIFO {
+///     fn pop(&self, queue: &mut Vec<Task>) -> Option<Task> {
+///         if !queue.is_empty() {
+///             queue.remove(0)
+///         } else {
+///             None
+///         }
+///     }
+///
+///     fn peek(&self, queue: &[Task]) -> Option<Task> {
+///         queue.first().cloned()
+///     }
+///
+///     fn clone_box(&self) -> Box<dyn Priority> {
+///         Box::new(self.clone())
+///     }
+/// }
+/// ```
+///
+/// ## `clone_box()`
+///
+/// The `clone_box()` method is required to satisfy the trait bounds for
+/// serialization and deserialization. The following implementation will work
+/// just fine:
+/// ```rust
+/// fn clone_box(&self) -> Box<dyn Priority> {
+///     Box::new(self.clone())
+/// }
+/// ```
 #[typetag::serde(tag = "type")]
 pub trait Priority: Send + Sync {
     fn pop(&self, queue: &mut Vec<Task>) -> Option<Task>;
