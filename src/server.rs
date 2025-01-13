@@ -1,43 +1,8 @@
-use crate::error::{IOError, SerializationError, SchedulingError};
-use crate::{NaiveTask, Task, TaskQueue, UpdateTask};
-use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicBool, Ordering};
+use crate::error::{IOError, SerializationError};
+use crate::{NaiveTask, Task, UpdateTask, SharedQueue};
+use std::sync::Arc;
 use piglog::error;
 use warp::Filter;
-
-pub type SharedQueue = Arc<Mutex<TaskQueue>>;
-
-/// `Scheduler` handles all task scheduling logic. It will update the active
-/// task based on the queue priority on a fixed timeout.
-pub struct Scheduler {
-    tasks: SharedQueue,
-    active_task: Option<Task>,
-}
-
-impl Scheduler {
-    /// Creates a new `Scheduler` with the given task queue.
-    pub fn with_queue(queue: SharedQueue) -> Self {
-        Self {
-            tasks: Arc::clone(&queue),
-            active_task: None,
-        }
-    }
-
-    /// Updates the scheduling logic on a timed loop. The `sigterm` parameter
-    /// should be set to `true` when the program exits, at which point all data
-    /// will be serialized and written to disk.
-    pub async fn run(&mut self, sigterm: AtomicBool) -> Result<(), SchedulingError> {
-        while !sigterm.load(Ordering::Relaxed) {
-            let queue = self.tasks.lock()?;
-            if queue.enabled {
-                unimplemented!()
-            }
-            std::thread::sleep(std::time::Duration::from_secs(5));
-        }
-
-        Ok(())
-    }
-}
 
 /// `Server` handles all communication with clients. This includes waiting for
 /// requests, updating shared resources, and sending responses.
@@ -55,7 +20,7 @@ impl Server {
 
     /// Spawn a new thread and begin listening for requests.
     pub async fn run(&mut self) {
-        let tasks = Arc::clone(&self.tasks);
+        let tasks: Arc<SharedQueue> = Arc::clone(&self.tasks);
 
         let filter = warp::any().map(move || tasks.clone());
 
