@@ -26,7 +26,7 @@ impl Scheduler {
     /// Updates the scheduling logic on a timed loop. The `sigterm` parameter
     /// should be set to `true` when the program exits, at which point all data
     /// will be serialized and written to disk.
-    pub async fn run(&mut self, sigterm: AtomicBool) -> Result<(), SchedulingError> {
+    pub async fn run(&mut self, sigterm: Arc<AtomicBool>) -> Result<(), SchedulingError> {
         while !sigterm.load(Ordering::Relaxed) {
             let mut queue = self.tasks.lock()?;
 
