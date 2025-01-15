@@ -2,7 +2,9 @@ use crate::Task;
 use serde::{Deserialize, Serialize};
 
 /// A struct implementing the `Priority` trait can be assigned to a `TaskQueue`
-/// to define the method for selecting tasks.
+/// to define the method for selecting tasks. The important method is 
+/// `select()` which defines the actual method of selection. To work properly,
+/// the `select()` method should **ignore tasks that are flagged as complete**.
 ///
 /// ## Example: `FIFO`
 ///
@@ -10,20 +12,8 @@ use serde::{Deserialize, Serialize};
 /// pub struct FIFO {}
 ///
 /// impl Priority for FIFO {
-///     fn pop(&self, queue: &mut Vec<Task>) -> Option<Task> {
-///         if !queue.is_empty() {
-///             queue.remove(0)
-///         } else {
-///             None
-///         }
-///     }
-///
-///     fn peek(&self, queue: &[Task]) -> Option<Task> {
+///     fn select(&self, queue: &[Task]) -> Option<Task> {
 ///         queue.first().cloned()
-///     }
-///
-///     fn clone_box(&self) -> Box<dyn Priority> {
-///         Box::new(self.clone())
 ///     }
 /// }
 /// ```
@@ -31,8 +21,8 @@ use serde::{Deserialize, Serialize};
 /// ## `clone_box()`
 ///
 /// The `clone_box()` method is required to satisfy the trait bounds for
-/// serialization and deserialization. The following implementation will work
-/// just fine:
+/// trait object serialization and deserialization. The following 
+/// implementation will work just fine:
 /// ```rust
 /// fn clone_box(&self) -> Box<dyn Priority> {
 ///     Box::new(self.clone())
@@ -40,8 +30,7 @@ use serde::{Deserialize, Serialize};
 /// ```
 #[typetag::serde(tag = "type")]
 pub trait Priority: Send + Sync {
-    fn pop(&self, queue: &mut Vec<Task>) -> Option<Task>;
-    fn peek(&self, queue: &[Task]) -> Option<Task>;
+    fn select(&self, queue: &[Task]) -> Option<Task>;
     fn clone_box(&self) -> Box<dyn Priority>;
 }
 
@@ -51,16 +40,8 @@ pub struct FIFO;
 
 #[typetag::serde]
 impl Priority for FIFO {
-    fn pop(&self, queue: &mut Vec<Task>) -> Option<Task> {
-        if !queue.is_empty() {
-            Some(queue.remove(0))
-        } else {
-            None
-        }
-    }
-
-    fn peek(&self, queue: &[Task]) -> Option<Task> {
-        queue.first().cloned()
+    fn select(&self, queue: &[Task]) -> Option<Task> {
+        queue.iter().find(|t| !t.completed).cloned()
     }
 
     fn clone_box(&self) -> Box<dyn Priority> {
@@ -74,15 +55,7 @@ pub struct Deadline;
 
 #[typetag::serde]
 impl Priority for Deadline {
-    fn pop(&self, queue: &mut Vec<Task>) -> Option<Task> {
-        if let Some((i, _)) = queue.iter().enumerate().min_by_key(|(_, t)| t.deadline) {
-            Some(queue.remove(i))
-        } else {
-            None
-        }
-    }
-
-    fn peek(&self, queue: &[Task]) -> Option<Task> {
+    fn select(&self, queue: &[Task]) -> Option<Task> {
         queue.iter().min_by_key(|t| t.deadline).cloned()
     }
 
@@ -98,15 +71,7 @@ pub struct Shortest {}
 
 #[typetag::serde]
 impl Priority for Shortest {
-    fn pop(&self, queue: &mut Vec<Task>) -> Option<Task> {
-        if let Some((i, _)) = queue.iter().enumerate().min_by_key(|(_, t)| t.duration) {
-            Some(queue.remove(i))
-        } else {
-            None
-        }
-    }
-
-    fn peek(&self, queue: &[Task]) -> Option<Task> {
+    fn select(&self, queue: &[Task]) -> Option<Task> {
         queue.iter().min_by_key(|t| t.duration).cloned()
     }
 
@@ -122,15 +87,7 @@ pub struct Longest {}
 
 #[typetag::serde]
 impl Priority for Longest {
-    fn pop(&self, queue: &mut Vec<Task>) -> Option<Task> {
-        if let Some((i, _)) = queue.iter().enumerate().max_by_key(|(_, t)| t.duration) {
-            Some(queue.remove(i))
-        } else {
-            None
-        }
-    }
-
-    fn peek(&self, queue: &[Task]) -> Option<Task> {
+    fn select(&self, queue: &[Task]) -> Option<Task> {
         queue.iter().max_by_key(|t| t.duration).cloned()
     }
 
@@ -146,15 +103,7 @@ pub struct HighestPriority {}
 
 #[typetag::serde]
 impl Priority for HighestPriority {
-    fn pop(&self, queue: &mut Vec<Task>) -> Option<Task> {
-        if let Some((i, _)) = queue.iter().enumerate().min_by_key(|(_, t)| t.priority) {
-            Some(queue.remove(i))
-        } else {
-            None
-        }
-    }
-
-    fn peek(&self, queue: &[Task]) -> Option<Task> {
+    fn select(&self, queue: &[Task]) -> Option<Task> {
         queue.iter().min_by_key(|t| t.priority).cloned()
     }
 
@@ -172,15 +121,7 @@ pub struct LowestPriority {}
 
 #[typetag::serde]
 impl Priority for LowestPriority {
-    fn pop(&self, queue: &mut Vec<Task>) -> Option<Task> {
-        if let Some((i, _)) = queue.iter().enumerate().max_by_key(|(_, t)| t.priority) {
-            Some(queue.remove(i))
-        } else {
-            None
-        }
-    }
-
-    fn peek(&self, queue: &[Task]) -> Option<Task> {
+    fn select(&self, queue: &[Task]) -> Option<Task> {
         queue.iter().max_by_key(|t| t.priority).cloned()
     }
 

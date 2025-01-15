@@ -94,3 +94,12 @@ impl<T> From<PoisonError<T>> for SchedulingError {
         }
     }
 }
+
+impl From<TaskNotFound> for SchedulingError {
+    fn from(_: TaskNotFound) -> Self {
+        Self {
+            message: "The requested task does not exist".to_string(),
+            etype: SchedulingErrorType::LogicError,
+        }
+    }
+}

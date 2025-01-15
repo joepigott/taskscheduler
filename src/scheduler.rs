@@ -2,6 +2,10 @@ use crate::{SharedQueue, Task};
 use crate::error::SchedulingError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread::sleep;
+use std::time::Duration;
+use chrono::TimeDelta;
+use piglog::error;
 
 /// `Scheduler` handles all task scheduling logic. It will update the active
 /// task based on the queue priority on a fixed timeout.
@@ -24,14 +28,37 @@ impl Scheduler {
     /// will be serialized and written to disk.
     pub async fn run(&mut self, sigterm: AtomicBool) -> Result<(), SchedulingError> {
         while !sigterm.load(Ordering::Relaxed) {
-            let queue = self.tasks.lock()?;
-            if queue.enabled {
-                unimplemented!()
+            let mut queue = self.tasks.lock()?;
+
+            // if the queue is disabled, skip the iteration.
+            if !queue.enabled {
+                drop(queue);
+                sleep(Duration::from_secs(5));
+                continue;
             }
-            std::thread::sleep(std::time::Duration::from_secs(5));
+
+            self.active_task = queue.select();
+
+            if let Some(task) = self.active_task.as_mut() {
+                // Tasks are marked as completed from outside of this scope, so
+                // we have to check for it on every loop.
+                if task.completed {
+                    queue.delete(task.id)?;
+                    queue.add_completed(task.clone());
+                    continue;
+                }
+
+                match task.duration.checked_sub(&TimeDelta::seconds(5)) {
+                    Some(duration) => task.duration = duration,
+                    None => {
+                        error!("Task duration overflowed! Something is seriously wrong.");
+                    }
+                }
+            }
+
+            sleep(Duration::from_secs(5));
         }
 
         Ok(())
     }
 }
-

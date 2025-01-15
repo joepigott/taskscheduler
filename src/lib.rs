@@ -18,6 +18,7 @@ pub struct Task {
     pub duration: Duration,
     pub priority: u8,
     pub active: bool,
+    pub completed: bool,
 }
 
 impl Task {
@@ -36,6 +37,7 @@ impl Task {
             duration,
             priority,
             active: false,
+            completed: false,
         }
     }
 
@@ -48,6 +50,7 @@ impl Task {
             duration: task.duration,
             priority: task.priority,
             active: false,
+            completed: false,
         }
     }
 }
@@ -145,7 +148,8 @@ impl UpdateTask {
 /// changes the selection algorithm.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct TaskQueue {
-    data: Vec<Task>,
+    tasks: Vec<Task>,
+    completed: Vec<Task>,
     priority: Box<dyn Priority>,
     pub enabled: bool,
 }
@@ -154,7 +158,8 @@ impl TaskQueue {
     /// Creates a new `TaskQueue` with the default priority of `Deadline`.
     pub fn new() -> Self {
         Self {
-            data: Vec::new(),
+            tasks: Vec::new(),
+            completed: Vec::new(),
             priority: Box::new(Deadline {}),
             enabled: false,
         }
@@ -163,7 +168,8 @@ impl TaskQueue {
     /// Creates a new `TaskQueue` with the given queue priority.
     pub fn with_priority<P: Priority + 'static>(priority: P) -> Self {
         Self {
-            data: Vec::new(),
+            tasks: Vec::new(),
+            completed: Vec::new(),
             priority: Box::new(priority),
             enabled: false,
         }
@@ -173,7 +179,7 @@ impl TaskQueue {
     pub fn new_id(&self) -> usize {
         use std::collections::HashSet;
 
-        let ids: HashSet<usize> = self.data.iter().map(|t| t.id).collect();
+        let ids: HashSet<usize> = self.tasks.iter().map(|t| t.id).collect();
         (1..).find(|id| !ids.contains(id)).unwrap()
     }
 
@@ -185,27 +191,42 @@ impl TaskQueue {
         }
     }
 
+    /// Returns an iterator over the contents of the completed tasks.
+    pub fn iter_completed(&self) -> TaskQueueIteratorCompleted {
+        TaskQueueIteratorCompleted {
+            task_queue: self,
+            index: 0,
+        }
+    }
+
     /// Add a new `Task` to the queue.
     pub fn add(&mut self, task: Task) {
-        self.data.push(task);
+        self.tasks.push(task);
     }
 
-    /// Pop a `Task` from the queue. Order of removal depends on the current
-    /// queue priority.
-    pub fn pop(&mut self) -> Option<Task> {
-        self.priority.pop(&mut self.data)
+    /// Add a `Task` to the completed list.
+    pub fn add_completed(&mut self, task: Task) {
+        self.completed.push(task);
     }
 
-    /// Returns the `Task` that would be popped from the queue *without*
-    /// removing it. The `Task` is cloned, not a reference.
-    pub fn peek(&self) -> Option<Task> {
-        self.priority.peek(&self.data)
+    /// Returns the next task based on the current priority algorithm.
+    pub fn select(&self) -> Option<Task> {
+        self.priority.select(&self.tasks)
     }
 
     /// Remove the `i`th task from the queue.
     pub fn remove(&mut self, i: usize) -> Option<Task> {
-        if i < self.data.len() {
-            Some(self.data.remove(i))
+        if i < self.tasks.len() {
+            Some(self.tasks.remove(i))
+        } else {
+            None
+        }
+    }
+
+    /// Remove the `i`th task from the completed list.
+    pub fn remove_completed(&mut self, i: usize) -> Option<Task> {
+        if i < self.completed.len() {
+            Some(self.completed.remove(i))
         } else {
             None
         }
@@ -214,19 +235,42 @@ impl TaskQueue {
     /// Returns a reference to the `i`th task *without* removing it from the
     /// queue.
     pub fn nth(&self, i: usize) -> Option<&Task> {
-        self.data.get(i)
+        self.tasks.get(i)
+    }
+
+    /// Returns a reference to the `i`th task *without* removing it from the
+    /// completed list.
+    pub fn nth_completed(&self, i: usize) -> Option<&Task> {
+        self.completed.get(i)
     }
 
     /// Returns a mutable reference to the task corresponding to the given ID.
     pub fn get_mut(&mut self, id: usize) -> Option<&mut Task> {
-        self.data.iter_mut().find(|t| t.id == id)
+        self.tasks.iter_mut().find(|t| t.id == id)
+    }
+
+    /// Returns a mutable reference to the completed task corresponding to the 
+    /// given ID.
+    pub fn get_mut_completed(&mut self, id: usize) -> Option<&mut Task> {
+        self.completed.iter_mut().find(|t| t.id == id)
     }
 
     /// Deletes the task corresponding to the given ID from the queue. If the
     /// task does not exist, a `TaskNotFound` error is returned.
     pub fn delete(&mut self, id: usize) -> Result<(), error::TaskNotFound> {
-        if let Some((i, _)) = self.data.iter().enumerate().find(|(_, t)| t.id == id) {
-            self.data.remove(i);
+        if let Some((i, _)) = self.tasks.iter().enumerate().find(|(_, t)| t.id == id) {
+            self.tasks.remove(i);
+            Ok(())
+        } else {
+            Err(error::TaskNotFound)
+        }
+    }
+
+    /// Deletes the task corresponding to the given ID from the completed list.
+    /// If the task does not exist, a `TaskNotFound` error is returned.
+    pub fn delete_completed(&mut self, id: usize) -> Result<(), error::TaskNotFound> {
+        if let Some((i, _)) = self.completed.iter().enumerate().find(|(_, t)| t.id == id) {
+            self.completed.remove(i);
             Ok(())
         } else {
             Err(error::TaskNotFound)
@@ -250,12 +294,32 @@ impl<'a> Iterator for TaskQueueIterator<'a> {
     type Item = &'a Task;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.task_queue.data.len() {
-            let result = &self.task_queue.data[self.index];
+        if self.index < self.task_queue.tasks.len() {
+            let result = &self.task_queue.tasks[self.index];
             self.index += 1;
 
             Some(result)
         } else {
+            None
+        }
+    }
+}
+
+pub struct TaskQueueIteratorCompleted<'a> {
+    task_queue: &'a TaskQueue,
+    index: usize,
+}
+
+impl<'a> Iterator for TaskQueueIteratorCompleted<'a> {
+    type Item = &'a Task;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.task_queue.completed.len() {
+            let result = &self.task_queue.completed[self.index];
+            self.index += 1;
+
+            Some(result)
+        } else{
             None
         }
     }
@@ -286,14 +350,14 @@ mod test {
 
         {
             let mut queue1 = queue.clone();
-            queue1.data.remove(2);
+            queue1.tasks.remove(2);
             assert_eq!(queue1.new_id(), 3);
         }
 
         {
             let mut queue1 = queue.clone();
-            queue1.data.remove(3);
-            queue1.data.remove(6);
+            queue1.tasks.remove(3);
+            queue1.tasks.remove(6);
             assert_eq!(queue1.new_id(), 4);
         }
     }

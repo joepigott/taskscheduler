@@ -20,7 +20,7 @@ impl Server {
 
     /// Spawn a new thread and begin listening for requests.
     pub async fn run(&mut self) {
-        let tasks: Arc<SharedQueue> = Arc::clone(&self.tasks);
+        let tasks: SharedQueue = Arc::clone(&self.tasks);
 
         let filter = warp::any().map(move || tasks.clone());
 
