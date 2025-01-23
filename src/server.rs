@@ -1,4 +1,4 @@
-use crate::error::{IOError, SerializationError};
+use crate::error::{IOError, SerializationError, ServerError};
 use crate::{NaiveTask, Task, UpdateTask, SharedQueue};
 use crate::vars;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -22,7 +22,7 @@ impl Server {
     }
 
     /// Spawn a new thread and begin listening for requests.
-    pub async fn run(&mut self, sigterm: Arc<AtomicBool>) {
+    pub async fn run(&mut self, sigterm: Arc<AtomicBool>) -> Result<(), ServerError> {
         info!("Entered server thread");
 
         let tasks: SharedQueue = Arc::clone(&self.tasks);
@@ -80,15 +80,13 @@ impl Server {
         let address = match vars::server_address() {
             Ok(address) => address,
             Err(e) => {
-                error!("{e}");
-                return;
+                return Err(ServerError(e));
             }
         };
         let timeout = match vars::server_timeout() {
             Ok(timeout) => timeout,
             Err(e) => {
-                error!("{e}");
-                return;
+                return Err(ServerError(e));
             }
         };
 
@@ -99,6 +97,8 @@ impl Server {
         }).1.await;
 
         info!("Gracefully exiting from server thread");
+
+        Ok(())
     }
 
     /// Extracts a `NaiveTask` from a `POST` request

@@ -1,5 +1,5 @@
 use crate::{SharedQueue, Task};
-use crate::error::{SchedulingError, SchedulingErrorType};
+use crate::error::SchedulingError;
 use crate::vars;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -33,7 +33,7 @@ impl Scheduler {
         let timeout = match vars::scheduler_timeout() {
             Ok(timeout) => timeout,
             Err(e) => {
-                return Err(SchedulingError::new(e, SchedulingErrorType::IOError))
+                return Err(SchedulingError(e))
             }
         };
 
