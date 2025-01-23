@@ -27,6 +27,8 @@ impl Scheduler {
     /// should be set to `true` when the program exits, at which point all data
     /// will be serialized and written to disk.
     pub async fn run(&mut self, sigterm: Arc<AtomicBool>) -> Result<(), SchedulingError> {
+        info!("Entered scheduler thread");
+
         while !sigterm.load(Ordering::Relaxed) {
             let mut queue = self.tasks.lock()?;
 
@@ -59,6 +61,8 @@ impl Scheduler {
 
             sleep(Duration::from_secs(5));
         }
+
+        info!("Gracefully exiting from scheduler thread");
 
         Ok(())
     }

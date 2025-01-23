@@ -1,7 +1,9 @@
 use crate::error::{IOError, SerializationError};
 use crate::{NaiveTask, Task, UpdateTask, SharedQueue};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 use std::sync::Arc;
-use piglog::error;
+use piglog::{info, error};
 use warp::Filter;
 
 /// `Server` handles all communication with clients. This includes waiting for
@@ -19,7 +21,9 @@ impl Server {
     }
 
     /// Spawn a new thread and begin listening for requests.
-    pub async fn run(&mut self) {
+    pub async fn run(&mut self, sigterm: Arc<AtomicBool>) {
+        info!("Entered server thread");
+
         let tasks: SharedQueue = Arc::clone(&self.tasks);
 
         let filter = warp::any().map(move || tasks.clone());
@@ -73,7 +77,13 @@ impl Server {
 
         let routes = post.or(get).or(put).or(delete).or(enable).or(disable);
 
-        warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
+        warp::serve(routes).bind_with_graceful_shutdown(([127, 0, 0, 1], 3030), async move {
+            while !sigterm.load(Ordering::Relaxed) {
+                std::thread::sleep(Duration::from_millis(100));
+            }
+        }).1.await;
+
+        info!("Gracefully exiting from server thread");
     }
 
     /// Extracts a `NaiveTask` from a `POST` request
