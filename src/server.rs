@@ -1,5 +1,6 @@
 use crate::error::{IOError, SerializationError};
 use crate::{NaiveTask, Task, UpdateTask, SharedQueue};
+use crate::vars;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use std::sync::Arc;
@@ -76,10 +77,24 @@ impl Server {
             .and_then(Self::disable);
 
         let routes = post.or(get).or(put).or(delete).or(enable).or(disable);
+        let address = match vars::server_address() {
+            Ok(address) => address,
+            Err(e) => {
+                error!("{e}");
+                return;
+            }
+        };
+        let timeout = match vars::server_timeout() {
+            Ok(timeout) => timeout,
+            Err(e) => {
+                error!("{e}");
+                return;
+            }
+        };
 
-        warp::serve(routes).bind_with_graceful_shutdown(([127, 0, 0, 1], 3030), async move {
+        warp::serve(routes).bind_with_graceful_shutdown(address, async move {
             while !sigterm.load(Ordering::Relaxed) {
-                std::thread::sleep(Duration::from_millis(100));
+                std::thread::sleep(Duration::from_millis(timeout as u64));
             }
         }).1.await;
 

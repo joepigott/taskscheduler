@@ -1,5 +1,6 @@
 use crate::{SharedQueue, Task};
-use crate::error::SchedulingError;
+use crate::error::{SchedulingError, SchedulingErrorType};
+use crate::vars;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::sleep;
@@ -29,6 +30,13 @@ impl Scheduler {
     pub async fn run(&mut self, sigterm: Arc<AtomicBool>) -> Result<(), SchedulingError> {
         info!("Entered scheduler thread");
 
+        let timeout = match vars::scheduler_timeout() {
+            Ok(timeout) => timeout,
+            Err(e) => {
+                return Err(SchedulingError::new(e, SchedulingErrorType::IOError))
+            }
+        };
+
         while !sigterm.load(Ordering::Relaxed) {
             let mut queue = self.tasks.lock()?;
 
@@ -45,7 +53,7 @@ impl Scheduler {
                         queue.delete(task.id)?;
                         queue.add_completed(task.clone());
                     } else {
-                        match task.duration.checked_sub(&TimeDelta::seconds(5)) {
+                        match task.duration.checked_sub(&TimeDelta::milliseconds(timeout as i64)) {
                             Some(duration) => task.duration = duration,
                             None => {
                                 error!("Task duration overflowed! Something is seriously wrong.");
@@ -59,7 +67,7 @@ impl Scheduler {
 
             drop(queue);
 
-            sleep(Duration::from_secs(5));
+            sleep(Duration::from_millis(timeout as u64));
         }
 
         info!("Gracefully exiting from scheduler thread");
