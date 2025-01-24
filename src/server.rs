@@ -1,8 +1,6 @@
 use crate::error::{IOError, SerializationError, ServerError};
 use crate::{NaiveTask, Task, UpdateTask, SharedQueue};
 use crate::vars;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
 use std::sync::Arc;
 use piglog::{info, error};
 use warp::Filter;
@@ -21,8 +19,10 @@ impl Server {
         }
     }
 
-    /// Spawn a new thread and begin listening for requests.
-    pub async fn run(&mut self, sigterm: Arc<AtomicBool>) -> Result<(), ServerError> {
+    /// Spawns a new thread and begin listening for requests. This thread does
+    /// *not* exit gracefully as it has no cleanup, so you should exit the
+    /// thread forcibly through whatever async runtime you're using.
+    pub async fn run(&mut self) -> Result<(), ServerError> {
         info!("Entered server thread");
 
         let tasks: SharedQueue = Arc::clone(&self.tasks);
@@ -83,20 +83,8 @@ impl Server {
                 return Err(ServerError(e));
             }
         };
-        let timeout = match vars::server_timeout() {
-            Ok(timeout) => timeout,
-            Err(e) => {
-                return Err(ServerError(e));
-            }
-        };
 
-        warp::serve(routes).bind_with_graceful_shutdown(address, async move {
-            while !sigterm.load(Ordering::Relaxed) {
-                std::thread::sleep(Duration::from_millis(timeout as u64));
-            }
-        }).1.await;
-
-        info!("Gracefully exiting from server thread");
+        warp::serve(routes).run(address).await;
 
         Ok(())
     }
