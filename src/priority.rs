@@ -2,7 +2,7 @@ use crate::Task;
 use serde::{Deserialize, Serialize};
 
 /// A struct implementing the `Priority` trait can be assigned to a `TaskQueue`
-/// to define the method for selecting tasks. The important method is 
+/// to define the method for selecting tasks. The important method is
 /// `select()` which defines the actual method of selection. To work properly,
 /// the `select()` method should **ignore tasks that are flagged as complete**.
 ///
@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 /// ## `clone_box()`
 ///
 /// The `clone_box()` method is required to satisfy the trait bounds for
-/// trait object serialization and deserialization. The following 
+/// trait object serialization and deserialization. The following
 /// implementation will work just fine:
 /// ```rust
 /// fn clone_box(&self) -> Box<dyn Priority> {

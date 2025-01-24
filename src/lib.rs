@@ -5,8 +5,8 @@ use std::sync::{Arc, Mutex};
 
 pub mod error;
 pub mod priority;
-pub mod server;
 pub mod scheduler;
+pub mod server;
 mod vars;
 
 /// `Task` contains information about a single task, including its ID, title,
@@ -250,7 +250,7 @@ impl TaskQueue {
         self.tasks.iter_mut().find(|t| t.id == id)
     }
 
-    /// Returns a mutable reference to the completed task corresponding to the 
+    /// Returns a mutable reference to the completed task corresponding to the
     /// given ID.
     pub fn get_mut_completed(&mut self, id: usize) -> Option<&mut Task> {
         self.completed.iter_mut().find(|t| t.id == id)
@@ -320,7 +320,7 @@ impl<'a> Iterator for TaskQueueIteratorCompleted<'a> {
             self.index += 1;
 
             Some(result)
-        } else{
+        } else {
             None
         }
     }

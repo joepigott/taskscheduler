@@ -1,5 +1,5 @@
-use std::fmt::{Debug, Display};
 use std::error::Error;
+use std::fmt::{Debug, Display};
 use std::sync::PoisonError;
 
 pub struct SerializationError;

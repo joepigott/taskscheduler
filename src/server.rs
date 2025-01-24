@@ -1,8 +1,8 @@
 use crate::error::{IOError, SerializationError, ServerError};
-use crate::{NaiveTask, Task, UpdateTask, SharedQueue};
 use crate::vars;
+use crate::{NaiveTask, SharedQueue, Task, UpdateTask};
+use piglog::{error, info};
 use std::sync::Arc;
-use piglog::{info, error};
 use warp::Filter;
 
 /// `Server` handles all communication with clients. This includes waiting for
@@ -203,7 +203,7 @@ impl Server {
 
         Ok(warp::reply::with_status(
             "Scheduler successfully enabled",
-            warp::http::StatusCode::OK
+            warp::http::StatusCode::OK,
         ))
     }
 
@@ -216,7 +216,7 @@ impl Server {
 
         Ok(warp::reply::with_status(
             "Scheduler successfully disabled",
-            warp::http::StatusCode::OK
+            warp::http::StatusCode::OK,
         ))
     }
 }

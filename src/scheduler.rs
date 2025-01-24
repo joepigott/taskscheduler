@@ -1,13 +1,13 @@
-use crate::{SharedQueue, Task};
 use crate::error::SchedulingError;
 use crate::vars;
-use std::sync::Arc;
+use crate::{SharedQueue, Task};
+use chrono::TimeDelta;
+use piglog::{error, info};
+use std::fs;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
-use std::fs;
-use chrono::TimeDelta;
-use piglog::{info, error};
 
 /// `Scheduler` handles all task scheduling logic. It will update the active
 /// task based on the queue priority on a fixed timeout.
@@ -50,7 +50,10 @@ impl Scheduler {
                         queue.delete(task.id)?;
                         queue.add_completed(task.clone());
                     } else {
-                        match task.duration.checked_sub(&TimeDelta::milliseconds(timeout as i64)) {
+                        match task
+                            .duration
+                            .checked_sub(&TimeDelta::milliseconds(timeout as i64))
+                        {
                             Some(duration) => task.duration = duration,
                             None => {
                                 error!("Task duration overflowed! Something is seriously wrong.");
@@ -76,7 +79,8 @@ impl Scheduler {
 
     fn save(&self, path: String) -> Result<(), SchedulingError> {
         let queue = self.tasks.lock()?;
-        let data = serde_json::to_vec(&queue.clone()).map_err(|e| SchedulingError(e.to_string()))?;
+        let data =
+            serde_json::to_vec(&queue.clone()).map_err(|e| SchedulingError(e.to_string()))?;
         fs::write(path, &data).map_err(|e| SchedulingError(e.to_string()))
     }
 }
