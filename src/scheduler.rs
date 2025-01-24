@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::sleep;
 use std::time::Duration;
+use std::fs;
 use chrono::TimeDelta;
 use piglog::{info, error};
 
@@ -30,12 +31,8 @@ impl Scheduler {
     pub async fn run(&mut self, sigterm: Arc<AtomicBool>) -> Result<(), SchedulingError> {
         info!("Entered scheduler thread");
 
-        let timeout = match vars::scheduler_timeout() {
-            Ok(timeout) => timeout,
-            Err(e) => {
-                return Err(SchedulingError(e))
-            }
-        };
+        let timeout = vars::scheduler_timeout()?;
+        let storage_path = vars::storage_path()?;
 
         while !sigterm.load(Ordering::Relaxed) {
             let mut queue = self.tasks.lock()?;
@@ -70,8 +67,16 @@ impl Scheduler {
             sleep(Duration::from_millis(timeout as u64));
         }
 
-        info!("Gracefully exiting from scheduler thread");
+        info!("Writing data to disk...");
+        self.save(storage_path)?;
+        info!("Data written. Exiting...");
 
         Ok(())
+    }
+
+    fn save(&self, path: String) -> Result<(), SchedulingError> {
+        let queue = self.tasks.lock()?;
+        let data = serde_json::to_vec(&queue.clone()).map_err(|e| SchedulingError(e.to_string()))?;
+        fs::write(path, &data).map_err(|e| SchedulingError(e.to_string()))
     }
 }

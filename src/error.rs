@@ -79,6 +79,12 @@ impl From<TaskNotFound> for SchedulingError {
     }
 }
 
+impl From<String> for SchedulingError {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
 impl Error for SchedulingError {}
 
 pub struct ServerError(pub String);

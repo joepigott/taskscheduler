@@ -4,6 +4,8 @@ use std::str::FromStr;
 
 const SERV_ADDRESS: &str = "SERVER_ADDR";
 const SCHED_TIMEOUT: &str = "SCHEDULER_TIMEOUT";
+const STORAGE_PATH: &str = "STORAGE_PATH";
+const DF_NAME: &str = "tasks.json";
 
 /// Fetches the server address environment variable as a `SocketAddr`.
 pub fn server_address() -> Result<SocketAddr, String> {
@@ -28,6 +30,17 @@ pub fn scheduler_timeout() -> Result<usize, String> {
         }
         Err(_) => {
             Err(format!("{SCHED_TIMEOUT} environment variable does not exist"))
+        }
+    }
+}
+
+/// Fetches the storage path environment variable. This defines the location
+/// where task data is written on shutdown.
+pub fn storage_path() -> Result<String, String> {
+    match var(STORAGE_PATH) {
+        Ok(path) => Ok(format!("{path}/{DF_NAME}")),
+        Err(_) => {
+            Err(format!("{STORAGE_PATH} environment variable does not exist"))
         }
     }
 }
