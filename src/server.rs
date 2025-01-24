@@ -110,8 +110,9 @@ impl Server {
         task: NaiveTask,
         queue: SharedQueue,
     ) -> Result<impl warp::Reply, warp::Rejection> {
-        let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
+        info!("Adding task {}", task.title);
 
+        let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
         let task = Task::from_naive(task, queue.new_id());
         queue.add(task);
 
@@ -125,9 +126,11 @@ impl Server {
     /// queue. A successful operation will respond with the requested data
     /// along with a 200 OK status.
     async fn get_tasks(queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
+        info!("Fetching tasks");
+
         let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
 
-        match bincode::serialize(&queue.clone()) {
+        match serde_json::to_vec(&queue.clone()) {
             Ok(data) => Ok(warp::reply::with_status(data, warp::http::StatusCode::OK)),
             Err(e) => {
                 error!("{e}");
@@ -142,6 +145,8 @@ impl Server {
         updates: UpdateTask,
         queue: SharedQueue,
     ) -> Result<impl warp::Reply, warp::Rejection> {
+        info!("Updating task {}", updates.id);
+
         let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
         let task = match queue.get_mut(updates.id) {
             Some(task) => task,
@@ -178,8 +183,9 @@ impl Server {
         id: usize,
         queue: SharedQueue,
     ) -> Result<impl warp::Reply, warp::Rejection> {
-        let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
+        info!("Deleting task {id}");
 
+        let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
         queue.delete(id)?;
 
         Ok(warp::reply::with_status(
@@ -190,8 +196,9 @@ impl Server {
 
     /// Enables the scheduler, which will start executing scheduling logic.
     async fn enable(queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
-        let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
+        info!("Enabling scheduler");
 
+        let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
         queue.enabled = true;
 
         Ok(warp::reply::with_status(
@@ -202,8 +209,9 @@ impl Server {
 
     /// Disables the scheduler, which will stop executing scheduling logic.
     async fn disable(queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
-        let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
+        info!("Disabling scheduler");
 
+        let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
         queue.enabled = false;
 
         Ok(warp::reply::with_status(

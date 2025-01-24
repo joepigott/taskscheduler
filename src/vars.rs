@@ -2,8 +2,8 @@ use std::env::var;
 use std::net::SocketAddr;
 use std::str::FromStr;
 
-const SERV_ADDRESS: &'static str = "SERVER_ADDR";
-const SCHED_TIMEOUT: &'static str = "SCHEDULER_TIMEOUT";
+const SERV_ADDRESS: &str = "SERVER_ADDR";
+const SCHED_TIMEOUT: &str = "SCHEDULER_TIMEOUT";
 
 /// Fetches the server address environment variable as a `SocketAddr`.
 pub fn server_address() -> Result<SocketAddr, String> {
