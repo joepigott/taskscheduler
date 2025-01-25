@@ -1,5 +1,6 @@
 use crate::error::{IOError, SerializationError, ServerError, TaskNotFound};
 use crate::vars;
+use crate::priority::Priority;
 use crate::{NaiveTask, SharedQueue, Task, UpdateTask};
 use piglog::{error, info};
 use std::sync::Arc;
@@ -92,6 +93,15 @@ impl Server {
             .and(filter.clone())
             .and_then(Self::status);
 
+        let priority = warp::put()
+            .and(warp::path("v1"))
+            .and(warp::path("tasks"))
+            .and(warp::path("priority"))
+            .and(warp::path::end())
+            .and(Self::priority_json())
+            .and(filter.clone())
+            .and_then(Self::priority);
+
         let routes = post
             .or(get)
             .or(put)
@@ -99,14 +109,10 @@ impl Server {
             .or(enable)
             .or(disable)
             .or(active)
-            .or(status);
+            .or(status)
+            .or(priority);
 
-        let address = match vars::server_address() {
-            Ok(address) => address,
-            Err(e) => {
-                return Err(ServerError(e));
-            }
-        };
+        let address = vars::server_address().map_err(|e| ServerError(e))?;
 
         warp::serve(routes).run(address).await;
 
@@ -125,6 +131,11 @@ impl Server {
 
     /// Extracts an ID as a `usize` from a `DELETE` request
     fn delete_json() -> impl Filter<Extract = (usize,), Error = warp::Rejection> + Clone {
+        warp::body::content_length_limit(1024 * 16).and(warp::body::json())
+    }
+
+    /// Extracts a `Box<dyn Priority>` from a `PUT` request
+    fn priority_json() -> impl Filter<Extract = (Box<dyn Priority>,), Error = warp::Rejection> + Clone {
         warp::body::content_length_limit(1024 * 16).and(warp::body::json())
     }
 
@@ -264,5 +275,18 @@ impl Server {
         let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
         let data = serde_json::to_vec(&queue.enabled).map_err(|_| warp::reject::custom(IOError))?;
         Ok(warp::reply::with_status(data, warp::http::StatusCode::OK))
+    }
+
+    /// Applies the provided priority to the task queue.
+    async fn priority(priority: Box<dyn Priority>, queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
+        info!("Updating task queue priority");
+
+        let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
+        queue.priority = priority;
+
+        Ok(warp::reply::with_status(
+            "Task queue priority successfully updated",
+            warp::http::StatusCode::OK,
+        ))
     }
 }

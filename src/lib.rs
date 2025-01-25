@@ -7,7 +7,7 @@ pub mod error;
 pub mod priority;
 pub mod scheduler;
 pub mod server;
-mod vars;
+pub mod vars;
 
 /// `Task` contains information about a single task, including its ID, title,
 /// deadline, duration, and priority.
