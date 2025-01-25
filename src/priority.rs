@@ -31,6 +31,7 @@ use serde::{Deserialize, Serialize};
 #[typetag::serde(tag = "type")]
 pub trait Priority: Send + Sync {
     fn select(&self, queue: &[Task]) -> Option<Task>;
+    fn string(&self) -> String;
     fn clone_box(&self) -> Box<dyn Priority>;
 }
 
@@ -42,6 +43,10 @@ pub struct FIFO;
 impl Priority for FIFO {
     fn select(&self, queue: &[Task]) -> Option<Task> {
         queue.iter().find(|t| !t.completed).cloned()
+    }
+
+    fn string(&self) -> String {
+        "FIFO".to_string()
     }
 
     fn clone_box(&self) -> Box<dyn Priority> {
@@ -57,6 +62,10 @@ pub struct Deadline;
 impl Priority for Deadline {
     fn select(&self, queue: &[Task]) -> Option<Task> {
         queue.iter().min_by_key(|t| t.deadline).cloned()
+    }
+
+    fn string(&self) -> String {
+        "Deadline".to_string()
     }
 
     fn clone_box(&self) -> Box<dyn Priority> {
@@ -75,6 +84,10 @@ impl Priority for Shortest {
         queue.iter().min_by_key(|t| t.duration).cloned()
     }
 
+    fn string(&self) -> String {
+        "Shortest Duration".to_string()
+    }
+
     fn clone_box(&self) -> Box<dyn Priority> {
         Box::new(self.clone())
     }
@@ -89,6 +102,10 @@ pub struct Longest {}
 impl Priority for Longest {
     fn select(&self, queue: &[Task]) -> Option<Task> {
         queue.iter().max_by_key(|t| t.duration).cloned()
+    }
+
+    fn string(&self) -> String {
+        "Longest Duration".to_string()
     }
 
     fn clone_box(&self) -> Box<dyn Priority> {
@@ -107,6 +124,10 @@ impl Priority for HighestPriority {
         queue.iter().min_by_key(|t| t.priority).cloned()
     }
 
+    fn string(&self) -> String {
+        "Highest Priority".to_string()
+    }
+
     fn clone_box(&self) -> Box<dyn Priority> {
         Box::new(self.clone())
     }
@@ -123,6 +144,10 @@ pub struct LowestPriority {}
 impl Priority for LowestPriority {
     fn select(&self, queue: &[Task]) -> Option<Task> {
         queue.iter().max_by_key(|t| t.priority).cloned()
+    }
+
+    fn string(&self) -> String {
+        "Lowest Priority".to_string()
     }
 
     fn clone_box(&self) -> Box<dyn Priority> {

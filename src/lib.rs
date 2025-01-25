@@ -176,6 +176,11 @@ impl TaskQueue {
         }
     }
 
+    /// Returns a string representing the current queue priority
+    pub fn show_priority(&self) -> String {
+        self.priority.string()
+    }
+
     /// Finds and returns the lowest unused ID.
     pub fn new_id(&self) -> usize {
         use std::collections::HashSet;
