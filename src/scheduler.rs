@@ -78,7 +78,8 @@ impl Scheduler {
     }
 
     fn save(&self, path: String) -> Result<(), SchedulingError> {
-        let queue = self.tasks.lock()?;
+        let mut queue = self.tasks.lock()?;
+        queue.enabled = false;
         let data =
             serde_json::to_vec(&queue.clone()).map_err(|e| SchedulingError(e.to_string()))?;
         fs::write(path, &data).map_err(|e| SchedulingError(e.to_string()))
