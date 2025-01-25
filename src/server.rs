@@ -1,4 +1,4 @@
-use crate::error::{IOError, SerializationError, ServerError};
+use crate::error::{IOError, SerializationError, ServerError, TaskNotFound};
 use crate::vars;
 use crate::{NaiveTask, SharedQueue, Task, UpdateTask};
 use piglog::{error, info};
@@ -76,7 +76,22 @@ impl Server {
             .and(filter.clone())
             .and_then(Self::disable);
 
-        let routes = post.or(get).or(put).or(delete).or(enable).or(disable);
+        let active = warp::get()
+            .and(warp::path("v1"))
+            .and(warp::path("tasks"))
+            .and(warp::path("active"))
+            .and(warp::path::end())
+            .and(filter.clone())
+            .and_then(Self::active);
+
+        let routes = post
+            .or(get)
+            .or(put)
+            .or(delete)
+            .or(enable)
+            .or(disable)
+            .or(active);
+
         let address = match vars::server_address() {
             Ok(address) => address,
             Err(e) => {
@@ -218,5 +233,18 @@ impl Server {
             "Scheduler successfully disabled",
             warp::http::StatusCode::OK,
         ))
+    }
+
+    /// Fetches the active task.
+    async fn active(queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
+        info!("Fetching active task");
+
+        let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
+        if let Some(task) = queue.select() {
+            let data = serde_json::to_vec(&task).map_err(|_| warp::reject::custom(IOError))?;
+            Ok(warp::reply::with_status(data, warp::http::StatusCode::OK))
+        } else {
+            Err(warp::reject::custom(TaskNotFound))
+        }
     }
 }
