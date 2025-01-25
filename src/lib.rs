@@ -120,26 +120,26 @@ impl UpdateTask {
     }
 
     /// Adds a title to the `UpdateTask` and returns it.
-    pub fn with_title(mut self, title: String) -> Self {
-        self.title = Some(title);
+    pub fn with_title(mut self, title: Option<String>) -> Self {
+        self.title = title;
         self
     }
 
     /// Adds a deadline to the `UpdateTask` and returns it.
-    pub fn with_deadline(mut self, deadline: NaiveDateTime) -> Self {
-        self.deadline = Some(deadline);
+    pub fn with_deadline(mut self, deadline: Option<NaiveDateTime>) -> Self {
+        self.deadline = deadline;
         self
     }
 
     /// Adds a duration to the `UpdateTask` and returns it.
-    pub fn with_duration(mut self, duration: Duration) -> Self {
-        self.duration = Some(duration);
+    pub fn with_duration(mut self, duration: Option<Duration>) -> Self {
+        self.duration = duration;
         self
     }
 
     /// Adds a priority to the `UpdateTask` and returns it.
-    pub fn with_priority(mut self, priority: u8) -> Self {
-        self.priority = Some(priority);
+    pub fn with_priority(mut self, priority: Option<u8>) -> Self {
+        self.priority = priority;
         self
     }
 }
