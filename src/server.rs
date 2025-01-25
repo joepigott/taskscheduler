@@ -84,13 +84,22 @@ impl Server {
             .and(filter.clone())
             .and_then(Self::active);
 
+        let status = warp::get()
+            .and(warp::path("v1"))
+            .and(warp::path("tasks"))
+            .and(warp::path("status"))
+            .and(warp::path::end())
+            .and(filter.clone())
+            .and_then(Self::status);
+
         let routes = post
             .or(get)
             .or(put)
             .or(delete)
             .or(enable)
             .or(disable)
-            .or(active);
+            .or(active)
+            .or(status);
 
         let address = match vars::server_address() {
             Ok(address) => address,
@@ -246,5 +255,14 @@ impl Server {
         } else {
             Err(warp::reject::custom(TaskNotFound))
         }
+    }
+
+    /// Fetches the scheduler status (enabled/disabled).
+    async fn status(queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
+        info!("Fetching scheduler status");
+
+        let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
+        let data = serde_json::to_vec(&queue.enabled).map_err(|_| warp::reject::custom(IOError))?;
+        Ok(warp::reply::with_status(data, warp::http::StatusCode::OK))
     }
 }
