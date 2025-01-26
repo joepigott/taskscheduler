@@ -50,11 +50,12 @@ impl Scheduler {
                         queue.delete(task.id)?;
                         queue.add_completed(task.clone());
                     } else {
-                        match task
+                        let task_mut = queue.get_mut(task.id).ok_or(SchedulingError("Active task is not in the queue.".to_string()))?;
+                        match task_mut
                             .duration
                             .checked_sub(&TimeDelta::milliseconds(timeout as i64))
                         {
-                            Some(duration) => task.duration = duration,
+                            Some(duration) => task_mut.duration = duration,
                             None => {
                                 error!("Task duration overflowed! Something is seriously wrong.");
                             }
