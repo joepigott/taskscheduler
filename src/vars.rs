@@ -2,9 +2,9 @@ use std::env::var;
 use std::net::SocketAddr;
 use std::str::FromStr;
 
-const SERV_ADDRESS: &str = "SERVER_ADDR";
-const SCHED_TIMEOUT: &str = "SCHEDULER_TIMEOUT";
-const STORAGE_PATH: &str = "STORAGE_PATH";
+const SERV_ADDRESS: &str = "TS_SERVER_ADDR";
+const SCHED_TIMEOUT: &str = "TS_SCHEDULER_TIMEOUT";
+const STORAGE_PATH: &str = "TS_STORAGE_PATH";
 const DF_NAME: &str = "tasks.json";
 
 /// Fetches the server address environment variable as a `SocketAddr`.
