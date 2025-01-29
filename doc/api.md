@@ -5,47 +5,15 @@ API.
 
 ## Specification
 
-| Request   | Success | Client Failure | Server Failure |
-|-----------|---------|----------------|----------------|
-| `POST`    | `201`   | `400`          | `500`          |
-| `PUT`     | `201`   | `400`          | `500`          |
-| `GET`     | `200`   | `404`          | `503`          |
-| `DELETE`  | `200`   | `400`          | `500`          |
-
-### `POST`
-
-A `POST` request should contain a serialized `NaiveTask` instance. This will be
-deserialized and processed by the server and will be assigned the lowest unique
-ID not in use.
-
-* Success: `201`
-* Client failure: `400`
-* Server failure: `500`
-
-### `PUT`
-
-A `PUT` request should contain a serialized `UpdateTask` instance with the
-appropriate ID and fields to be updated.
-
-* Success: `201`
-* Client failure: `400`
-* Server failure: `500`
-
-### `GET`
-
-A `GET` request should contain no body. The server will respond with a 
-serialized vector of `Task` objects, with which the client can do what they 
-please.
-
-* Success: `200`
-* Client failure: `404`
-* Server failure: `503`
-
-### `DELETE`
-
-A `DELETE` request should contain the ID of the task to be deleted. This action
-is not recoverable.
-
-* Success: `200`
-* Client failure: `400`
-* Server failure: `500`
+| Request   | Location              | Effect                         | Success | Client Failure | Server Failure |
+|-----------|-----------------------|--------------------------------|---------|----------------|----------------|
+| `POST`    | `/v1/tasks/`          | Adds a task to the queue       | `201`   | `400`          | `500`          |
+| `PUT`     | `/v1/tasks/`          | Updates a task in the queue    | `201`   | `400`          | `500`          |
+| `GET`     | `/v1/tasks/`          | Fetches the queue contents     | `200`   | `404`          | `503`          |
+| `DELETE`  | `/v1/tasks/`          | Deletes a task from the queue  | `200`   | `400`          | `500`          |
+| `POST`    | `/v1/tasks/enable`    | Enables the scheduler          | `200`   | `400`          | `500`          |
+| `POST`    | `/v1/tasks/disable`   | Disables the scheduler         | `200`   | `400`          | `500`          |
+| `GET`     | `/v1/tasks/active`    | Fetches the active task        | `200`   | `404`          | `503`          |
+| `GET`     | `/v1/tasks/status`    | Fetches the scheduler status   | `200`   | `400`          | `500`          |
+| `PUT`    | `/v1/tasks/priority`   | Sets the scheduler priority    | `200`   | `400`          | `500`          |
+| `PUT`    | `/v1/tasks/complete `  | Marks a task as complete       | `200`   | `400`          | `500`          |
