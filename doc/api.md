@@ -7,13 +7,13 @@ API.
 
 | Request   | Location              | Effect                         | Success | Client Failure | Server Failure |
 |-----------|-----------------------|--------------------------------|---------|----------------|----------------|
-| `POST`    | `/v1/tasks/`          | Adds a task to the queue       | `201`   | `400`          | `500`          |
-| `PUT`     | `/v1/tasks/`          | Updates a task in the queue    | `201`   | `400`          | `500`          |
-| `GET`     | `/v1/tasks/`          | Fetches the queue contents     | `200`   | `404`          | `503`          |
-| `DELETE`  | `/v1/tasks/`          | Deletes a task from the queue  | `200`   | `400`          | `500`          |
-| `POST`    | `/v1/tasks/enable`    | Enables the scheduler          | `200`   | `400`          | `500`          |
-| `POST`    | `/v1/tasks/disable`   | Disables the scheduler         | `200`   | `400`          | `500`          |
-| `GET`     | `/v1/tasks/active`    | Fetches the active task        | `200`   | `404`          | `503`          |
-| `GET`     | `/v1/tasks/status`    | Fetches the scheduler status   | `200`   | `400`          | `500`          |
-| `PUT`    | `/v1/tasks/priority`   | Sets the scheduler priority    | `200`   | `400`          | `500`          |
-| `PUT`    | `/v1/tasks/complete `  | Marks a task as complete       | `200`   | `400`          | `500`          |
+| `POST`    | `/api/tasks/`          | Adds a task to the queue       | `201`   | `400`          | `500`          |
+| `PUT`     | `/api/tasks/`          | Updates a task in the queue    | `201`   | `400`          | `500`          |
+| `GET`     | `/api/tasks/`          | Fetches the queue contents     | `200`   | `404`          | `503`          |
+| `DELETE`  | `/api/tasks/`          | Deletes a task from the queue  | `200`   | `400`          | `500`          |
+| `POST`    | `/api/tasks/enable`    | Enables the scheduler          | `200`   | `400`          | `500`          |
+| `POST`    | `/api/tasks/disable`   | Disables the scheduler         | `200`   | `400`          | `500`          |
+| `GET`     | `/api/tasks/active`    | Fetches the active task        | `200`   | `404`          | `503`          |
+| `GET`     | `/api/tasks/status`    | Fetches the scheduler status   | `200`   | `400`          | `500`          |
+| `PUT`    | `/api/tasks/priority`   | Sets the scheduler priority    | `200`   | `400`          | `500`          |
+| `PUT`    | `/api/tasks/complete `  | Marks a task as complete       | `200`   | `400`          | `500`          |

@@ -31,7 +31,7 @@ impl Server {
         let filter = warp::any().map(move || tasks.clone());
 
         let post = warp::post()
-            .and(warp::path("v1"))
+            .and(warp::path("api"))
             .and(warp::path("tasks"))
             .and(warp::path::end())
             .and(Self::post_json())
@@ -39,14 +39,14 @@ impl Server {
             .and_then(Self::add_task);
 
         let get = warp::get()
-            .and(warp::path("v1"))
+            .and(warp::path("api"))
             .and(warp::path("tasks"))
             .and(warp::path::end())
             .and(filter.clone())
             .and_then(Self::get_tasks);
 
         let put = warp::put()
-            .and(warp::path("v1"))
+            .and(warp::path("api"))
             .and(warp::path("tasks"))
             .and(warp::path::end())
             .and(Self::put_json())
@@ -54,7 +54,7 @@ impl Server {
             .and_then(Self::update_task);
 
         let delete = warp::delete()
-            .and(warp::path("v1"))
+            .and(warp::path("api"))
             .and(warp::path("tasks"))
             .and(warp::path::end())
             .and(Self::id_json())
@@ -62,7 +62,7 @@ impl Server {
             .and_then(Self::delete_task);
 
         let enable = warp::post()
-            .and(warp::path("v1"))
+            .and(warp::path("api"))
             .and(warp::path("tasks"))
             .and(warp::path("enable"))
             .and(warp::path::end())
@@ -70,7 +70,7 @@ impl Server {
             .and_then(Self::enable);
 
         let disable = warp::post()
-            .and(warp::path("v1"))
+            .and(warp::path("api"))
             .and(warp::path("tasks"))
             .and(warp::path("disable"))
             .and(warp::path::end())
@@ -78,7 +78,7 @@ impl Server {
             .and_then(Self::disable);
 
         let active = warp::get()
-            .and(warp::path("v1"))
+            .and(warp::path("api"))
             .and(warp::path("tasks"))
             .and(warp::path("active"))
             .and(warp::path::end())
@@ -86,7 +86,7 @@ impl Server {
             .and_then(Self::active);
 
         let status = warp::get()
-            .and(warp::path("v1"))
+            .and(warp::path("api"))
             .and(warp::path("tasks"))
             .and(warp::path("status"))
             .and(warp::path::end())
@@ -94,7 +94,7 @@ impl Server {
             .and_then(Self::status);
 
         let priority = warp::put()
-            .and(warp::path("v1"))
+            .and(warp::path("api"))
             .and(warp::path("tasks"))
             .and(warp::path("priority"))
             .and(warp::path::end())
@@ -103,7 +103,7 @@ impl Server {
             .and_then(Self::priority);
 
         let complete = warp::put()
-            .and(warp::path("v1"))
+            .and(warp::path("api"))
             .and(warp::path("tasks"))
             .and(warp::path("complete"))
             .and(warp::path::end())
