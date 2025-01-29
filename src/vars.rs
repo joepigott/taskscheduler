@@ -18,6 +18,11 @@ pub fn server_address() -> Result<SocketAddr, String> {
     }
 }
 
+/// Validates the server address by attempting to bind to it.
+pub fn is_available(address: SocketAddr) -> bool {
+    std::net::TcpListener::bind(address).is_ok()
+}
+
 /// Fetches the scheduler timeout environment variable (in milliseconds) as a
 /// `usize`. This controls how frequently the scheduler will apply scheduling
 /// logic. It also controls how fast the scheduler thread will exit on average

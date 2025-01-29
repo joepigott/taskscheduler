@@ -123,9 +123,11 @@ impl Server {
             .or(complete);
 
         let address = vars::server_address().map_err(|e| ServerError(e))?;
+        if !vars::is_available(address) {
+            return Err(ServerError("Address is already in use".to_string()));
+        }
 
         info!("Server listening on {address}");
-
         warp::serve(routes).run(address).await;
 
         Ok(())
