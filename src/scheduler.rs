@@ -29,7 +29,7 @@ impl Scheduler {
     /// should be set to `true` when the program exits, at which point all data
     /// will be serialized and written to disk.
     pub async fn run(&mut self, sigterm: Arc<AtomicBool>) -> Result<(), SchedulingError> {
-        info!("Entered scheduler thread");
+        info!("Starting scheduler (disabled)...");
 
         let timeout = vars::scheduler_timeout()?;
         let storage_path = vars::storage_path()?;

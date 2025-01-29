@@ -24,7 +24,7 @@ impl Server {
     /// *not* exit gracefully as it has no cleanup, so you should exit the
     /// thread forcibly through whatever async runtime you're using.
     pub async fn run(&mut self) -> Result<(), ServerError> {
-        info!("Entered server thread");
+        info!("Starting server...");
 
         let tasks: SharedQueue = Arc::clone(&self.tasks);
 
@@ -57,7 +57,7 @@ impl Server {
             .and(warp::path("v1"))
             .and(warp::path("tasks"))
             .and(warp::path::end())
-            .and(Self::delete_json())
+            .and(Self::id_json())
             .and(filter.clone())
             .and_then(Self::delete_task);
 
@@ -102,6 +102,15 @@ impl Server {
             .and(filter.clone())
             .and_then(Self::priority);
 
+        let complete = warp::put()
+            .and(warp::path("v1"))
+            .and(warp::path("tasks"))
+            .and(warp::path("complete"))
+            .and(warp::path::end())
+            .and(Self::id_json())
+            .and(filter.clone())
+            .and_then(Self::complete);
+
         let routes = post
             .or(get)
             .or(put)
@@ -110,9 +119,12 @@ impl Server {
             .or(disable)
             .or(active)
             .or(status)
-            .or(priority);
+            .or(priority)
+            .or(complete);
 
         let address = vars::server_address().map_err(|e| ServerError(e))?;
+
+        info!("Server listening on {address}");
 
         warp::serve(routes).run(address).await;
 
@@ -130,7 +142,7 @@ impl Server {
     }
 
     /// Extracts an ID as a `usize` from a `DELETE` request
-    fn delete_json() -> impl Filter<Extract = (usize,), Error = warp::Rejection> + Clone {
+    fn id_json() -> impl Filter<Extract = (usize,), Error = warp::Rejection> + Clone {
         warp::body::content_length_limit(1024 * 16).and(warp::body::json())
     }
 
@@ -286,6 +298,21 @@ impl Server {
 
         Ok(warp::reply::with_status(
             "Task queue priority successfully updated",
+            warp::http::StatusCode::OK,
+        ))
+    }
+
+    /// Marks the task with the given ID as complete.
+    async fn complete(id: usize, queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
+        info!("Marking task {id} as complete");
+
+        let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
+        let task = queue.get_mut(id).ok_or(warp::reject::custom(TaskNotFound))?.to_owned();
+        queue.delete(task.id).map_err(|_| warp::reject::custom(TaskNotFound))?;
+        queue.add_completed(task);
+
+        Ok(warp::reply::with_status(
+            "Task marked as completed",
             warp::http::StatusCode::OK,
         ))
     }
