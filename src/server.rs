@@ -1,6 +1,6 @@
 use crate::error::{IOError, SerializationError, ServerError, TaskNotFound};
-use crate::vars;
 use crate::priority::Priority;
+use crate::vars;
 use crate::{NaiveTask, SharedQueue, Task, UpdateTask};
 use piglog::{error, info};
 use std::sync::Arc;
@@ -131,28 +131,28 @@ impl Server {
         Ok(())
     }
 
-    /// Extracts a `NaiveTask` from a `POST` request
+    /// Extracts a `NaiveTask` from a `POST` request.
     fn post_json() -> impl Filter<Extract = (NaiveTask,), Error = warp::Rejection> + Clone {
         warp::body::content_length_limit(1024 * 16).and(warp::body::json())
     }
 
-    /// Extracts an `UpdateTask` from a `PUT` request
+    /// Extracts an `UpdateTask` from a `PUT` request.
     fn put_json() -> impl Filter<Extract = (UpdateTask,), Error = warp::Rejection> + Clone {
         warp::body::content_length_limit(1024 * 16).and(warp::body::json())
     }
 
-    /// Extracts an ID as a `usize` from a `DELETE` request
+    /// Extracts an ID as a `usize` from a `DELETE` request.
     fn id_json() -> impl Filter<Extract = (usize,), Error = warp::Rejection> + Clone {
         warp::body::content_length_limit(1024 * 16).and(warp::body::json())
     }
 
-    /// Extracts a `Box<dyn Priority>` from a `PUT` request
-    fn priority_json() -> impl Filter<Extract = (Box<dyn Priority>,), Error = warp::Rejection> + Clone {
+    /// Extracts a `Box<dyn Priority>` from a `PUT` request.
+    fn priority_json(
+    ) -> impl Filter<Extract = (Box<dyn Priority>,), Error = warp::Rejection> + Clone {
         warp::body::content_length_limit(1024 * 16).and(warp::body::json())
     }
 
-    /// Adds a task to the queue. A successful operation will reply with a 200
-    /// OK status.
+    /// Adds a task to the queue.
     async fn add_task(
         task: NaiveTask,
         queue: SharedQueue,
@@ -170,8 +170,7 @@ impl Server {
     }
 
     /// Replies with a serialized representation of the entire contents of the
-    /// queue. A successful operation will respond with the requested data
-    /// along with a 200 OK status.
+    /// queue.
     async fn get_tasks(queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
         info!("Fetching tasks");
 
@@ -186,8 +185,7 @@ impl Server {
         }
     }
 
-    /// Updates a task in the queue. A successful operation will reply with a
-    /// 200 OK status.
+    /// Updates a task in the queue.
     async fn update_task(
         updates: UpdateTask,
         queue: SharedQueue,
@@ -224,8 +222,7 @@ impl Server {
         ))
     }
 
-    /// Deletes a task from the queue. A successful operation will reply with a
-    /// 200 OK status.
+    /// Deletes a task from the queue.
     async fn delete_task(
         id: usize,
         queue: SharedQueue,
@@ -290,7 +287,10 @@ impl Server {
     }
 
     /// Applies the provided priority to the task queue.
-    async fn priority(priority: Box<dyn Priority>, queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
+    async fn priority(
+        priority: Box<dyn Priority>,
+        queue: SharedQueue,
+    ) -> Result<impl warp::Reply, warp::Rejection> {
         info!("Updating task queue priority");
 
         let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
@@ -307,8 +307,13 @@ impl Server {
         info!("Marking task {id} as complete");
 
         let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
-        let task = queue.get_mut(id).ok_or(warp::reject::custom(TaskNotFound))?.to_owned();
-        queue.delete(task.id).map_err(|_| warp::reject::custom(TaskNotFound))?;
+        let task = queue
+            .get_mut(id)
+            .ok_or(warp::reject::custom(TaskNotFound))?
+            .to_owned();
+        queue
+            .delete(task.id)
+            .map_err(|_| warp::reject::custom(TaskNotFound))?;
         queue.add_completed(task);
 
         Ok(warp::reply::with_status(

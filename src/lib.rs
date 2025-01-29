@@ -311,6 +311,8 @@ impl<'a> Iterator for TaskQueueIterator<'a> {
     }
 }
 
+/// Implements `Iterator` for easy iteration over the completed tasks in a
+/// `TaskQueue`.
 pub struct TaskQueueIteratorCompleted<'a> {
     task_queue: &'a TaskQueue,
     index: usize,

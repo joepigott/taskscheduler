@@ -2,6 +2,7 @@ use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::sync::PoisonError;
 
+/// An error that can occur during serialization or deserialization.
 pub struct SerializationError;
 
 impl Display for SerializationError {
@@ -19,6 +20,8 @@ impl Debug for SerializationError {
 impl warp::reject::Reject for SerializationError {}
 impl std::error::Error for SerializationError {}
 
+/// An error that can occur due to IO operations such as accessing data through
+/// a Mutex.
 pub struct IOError;
 
 impl Display for IOError {
@@ -36,6 +39,8 @@ impl Debug for IOError {
 impl warp::reject::Reject for IOError {}
 impl std::error::Error for IOError {}
 
+/// An error that occurs when an operation requested access to a task but the
+/// task does not exist.
 pub struct TaskNotFound;
 
 impl Display for TaskNotFound {
@@ -53,6 +58,7 @@ impl Debug for TaskNotFound {
 impl Error for TaskNotFound {}
 impl warp::reject::Reject for TaskNotFound {}
 
+/// An error that occurs in the scheduling logic.
 pub struct SchedulingError(pub String);
 
 impl Display for SchedulingError {
@@ -87,6 +93,7 @@ impl From<String> for SchedulingError {
 
 impl Error for SchedulingError {}
 
+/// An error that occurs in the server logic.
 pub struct ServerError(pub String);
 
 impl Display for ServerError {
