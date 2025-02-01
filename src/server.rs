@@ -93,14 +93,22 @@ impl Server {
             .and(filter.clone())
             .and_then(Self::status);
 
-        let priority = warp::put()
+        let set_priority = warp::put()
             .and(warp::path("api"))
             .and(warp::path("tasks"))
             .and(warp::path("priority"))
             .and(warp::path::end())
             .and(Self::priority_json())
             .and(filter.clone())
-            .and_then(Self::priority);
+            .and_then(Self::set_priority);
+
+        let get_priority = warp::get()
+            .and(warp::path("api"))
+            .and(warp::path("tasks"))
+            .and(warp::path("priority"))
+            .and(warp::path::end())
+            .and(filter.clone())
+            .and_then(Self::get_priority);
 
         let complete = warp::put()
             .and(warp::path("api"))
@@ -119,7 +127,8 @@ impl Server {
             .or(disable)
             .or(active)
             .or(status)
-            .or(priority)
+            .or(set_priority)
+            .or(get_priority)
             .or(complete);
 
         let address = vars::server_address().map_err(|e| ServerError(e))?;
@@ -289,7 +298,7 @@ impl Server {
     }
 
     /// Applies the provided priority to the task queue.
-    async fn priority(
+    async fn set_priority(
         priority: Box<dyn Priority>,
         queue: SharedQueue,
     ) -> Result<impl warp::Reply, warp::Rejection> {
@@ -301,6 +310,19 @@ impl Server {
         Ok(warp::reply::with_status(
             "Task queue priority successfully updated",
             warp::http::StatusCode::OK,
+        ))
+    }
+
+    /// Fetches the current scheduler priority
+    async fn get_priority(queue: SharedQueue) -> Result<impl warp::Reply, warp::Rejection> {
+        info!("Fetching scheduler priority");
+
+        let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
+        let reply = serde_json::to_string(&queue.priority).map_err(|_| warp::reject::custom(SerializationError))?;
+
+        Ok(warp::reply::with_status(
+            reply,
+            warp::http::StatusCode::OK
         ))
     }
 

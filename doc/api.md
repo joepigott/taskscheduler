@@ -15,5 +15,6 @@ API.
 | `POST`    | `/api/tasks/disable`   | Disables the scheduler         | `200`   | `400`          | `500`          |
 | `GET`     | `/api/tasks/active`    | Fetches the active task        | `200`   | `404`          | `503`          |
 | `GET`     | `/api/tasks/status`    | Fetches the scheduler status   | `200`   | `400`          | `500`          |
+| `GET`     | `/api/tasks/priority`  | Fetches the scheduler priority | `200`   | `400`          | `500`          |
 | `PUT`     | `/api/tasks/priority`  | Sets the scheduler priority    | `200`   | `400`          | `500`          |
-| `PUT`     | `/api/tasks/complete ` | Marks a task as complete       | `200`   | `400`          | `500`          |
+| `PUT`     | `/api/tasks/complete`  | Marks a task as complete       | `200`   | `400`          | `500`          |
