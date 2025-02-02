@@ -119,6 +119,15 @@ impl Server {
             .and(filter.clone())
             .and_then(Self::complete);
 
+        let del_complete = warp::delete()
+            .and(warp::path("api"))
+            .and(warp::path("tasks"))
+            .and(warp::path("complete"))
+            .and(warp::path::end())
+            .and(Self::id_json())
+            .and(filter.clone())
+            .and_then(Self::del_complete);
+
         let routes = post
             .or(get)
             .or(put)
@@ -129,7 +138,8 @@ impl Server {
             .or(status)
             .or(set_priority)
             .or(get_priority)
-            .or(complete);
+            .or(complete)
+            .or(del_complete);
 
         let address = vars::server_address().map_err(|e| ServerError(e))?;
         if !vars::is_available(address) {
@@ -342,6 +352,22 @@ impl Server {
 
         Ok(warp::reply::with_status(
             "Task marked as completed",
+            warp::http::StatusCode::OK,
+        ))
+    }
+
+    /// Deletes a task from the completed list.
+    async fn del_complete(
+        id: usize,
+        queue: SharedQueue,
+    ) -> Result<impl warp::Reply, warp::Rejection> {
+        info!("Deleting task {id}");
+
+        let mut queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
+        queue.delete_completed(id)?;
+
+        Ok(warp::reply::with_status(
+            "Item successfully deleted",
             warp::http::StatusCode::OK,
         ))
     }

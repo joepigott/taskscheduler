@@ -18,3 +18,4 @@ API.
 | `GET`     | `/api/tasks/priority`  | Fetches the scheduler priority | `200`   | `400`          | `500`          |
 | `PUT`     | `/api/tasks/priority`  | Sets the scheduler priority    | `200`   | `400`          | `500`          |
 | `PUT`     | `/api/tasks/complete`  | Marks a task as complete       | `200`   | `400`          | `500`          |
+| `DELETE`  | `/api/tasks/complete`  | Deletes a completed task       | `200`   | `400`          | `500`          |
