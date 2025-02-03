@@ -160,3 +160,144 @@ impl Clone for Box<dyn Priority> {
         self.clone_box()
     }
 }
+
+/// A score is calculated for each task based on the following formula:
+/// ```rust
+/// let score = (deadline_weight * (deadline - now)) - (duration_weight * duration)
+/// ```
+/// The lowest score gets scheduled.
+///
+/// This priority will attempt to schedule shorter tasks first, but will
+/// schedule longer tasks if their score is lower. This allows for "urgent"
+/// tasks to avoid starvation.
+///
+/// In the event of a tie, tasks are then scheduled by priority, then by their
+/// ID.
+///
+/// ## Parameters
+/// - `deadline_weight` - Determines the impact of deadlines on the score. A
+/// higher value will effectively prioritize tasks that have closer deadlines.
+/// - `duration_weight` - Determines the (negative) impact of durations on the
+/// score. A higher value will prioritize tasks that have shorter durations.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ShortestWithUrgency {
+    /// How much to prioritize deadlines over durations
+    deadline_weight: i64,
+
+    /// How much to prioritize durations over deadlines
+    duration_weight: i64,
+}
+
+#[typetag::serde]
+impl Priority for ShortestWithUrgency {
+    fn select(&self, queue: &[Task]) -> Option<Task> {
+        queue
+            .iter()
+            .map(|t| {
+                let current_time = chrono::Local::now().naive_local();
+                let deadline_distance = t.deadline - current_time;
+
+                let score = (deadline_distance.num_seconds() / self.deadline_weight)
+                    - (self.duration_weight * t.duration.num_seconds());
+                println!("{score}");
+
+                (t, score)
+            })
+            .min_by_key(|(t, s)| (*s, t.priority, t.id)) // score, then priority, then id
+            .map(|(t, _)| t)
+            .cloned()
+    }
+
+    fn string(&self) -> String {
+        "Shortest Duration with Urgency".to_string()
+    }
+
+    fn clone_box(&self) -> Box<dyn Priority> {
+        Box::new(self.clone())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::{Task, TaskQueue};
+    use chrono::Duration;
+
+    #[test]
+    fn test_shortest_urgency() {
+        let mut queue = TaskQueue::with_priority(ShortestWithUrgency {
+            deadline_weight: 1,
+            duration_weight: 1,
+        });
+
+        let now = chrono::Local::now().naive_local();
+
+        let task1 = Task::new(
+            1,
+            "task 1".to_string(),
+            now + Duration::hours(2),
+            Duration::minutes(30),
+            0,
+        );
+        let task2 = Task::new(
+            2,
+            "task 2".to_string(),
+            now + Duration::hours(8),
+            Duration::hours(4),
+            0,
+        );
+        let task3 = Task::new(
+            3,
+            "task 3".to_string(),
+            now - Duration::hours(1),
+            Duration::minutes(10),
+            0,
+        );
+
+        queue.add(task1.clone());
+        queue.add(task2.clone());
+        queue.add(task3.clone());
+
+        assert_eq!(queue.select().unwrap().id, task3.id);
+        queue.delete(queue.select().unwrap().id).unwrap();
+        assert_eq!(queue.select().unwrap().id, task1.id);
+        queue.delete(queue.select().unwrap().id).unwrap();
+        assert_eq!(queue.select().unwrap().id, task2.id);
+        queue.delete(queue.select().unwrap().id).unwrap();
+
+        drop(queue);
+    }
+
+    #[test]
+    fn test_shortest_urgency_tie() {
+        let mut queue = TaskQueue::with_priority(ShortestWithUrgency {
+            duration_weight: 1,
+            deadline_weight: 1,
+        });
+
+        let now = chrono::Local::now().naive_local();
+
+        let task1 = Task::new(
+            1,
+            "task 1".to_string(),
+            now + Duration::hours(4),
+            Duration::hours(4),
+            1,
+        );
+        let task2 = Task::new(
+            2,
+            "task 2".to_string(),
+            now + Duration::hours(8),
+            Duration::hours(8),
+            5,
+        );
+
+        queue.add(task1.clone());
+        queue.add(task2.clone());
+
+        assert_eq!(queue.select().unwrap().id, task1.id);
+        queue.delete(queue.select().unwrap().id).unwrap();
+        assert_eq!(queue.select().unwrap().id, task2.id);
+        queue.delete(queue.select().unwrap().id).unwrap();
+    }
+}

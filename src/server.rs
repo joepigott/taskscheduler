@@ -328,12 +328,10 @@ impl Server {
         info!("Fetching scheduler priority");
 
         let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
-        let reply = serde_json::to_string(&queue.priority).map_err(|_| warp::reject::custom(SerializationError))?;
+        let reply = serde_json::to_string(&queue.priority)
+            .map_err(|_| warp::reject::custom(SerializationError))?;
 
-        Ok(warp::reply::with_status(
-            reply,
-            warp::http::StatusCode::OK
-        ))
+        Ok(warp::reply::with_status(reply, warp::http::StatusCode::OK))
     }
 
     /// Marks the task with the given ID as complete.
