@@ -5,6 +5,7 @@ use crate::{NaiveTask, SharedQueue, Task, UpdateTask};
 use piglog::{error, info};
 use std::sync::Arc;
 use warp::Filter;
+use std::convert::Infallible;
 
 /// `Server` handles all communication with clients. This includes waiting for
 /// requests, updating shared resources, and sending responses.
@@ -139,9 +140,10 @@ impl Server {
             .or(set_priority)
             .or(get_priority)
             .or(complete)
-            .or(del_complete);
+            .or(del_complete)
+            .recover(Self::handle_rejection);
 
-        let address = vars::server_address().map_err(|e| ServerError(e))?;
+        let address = vars::server_address().map_err(ServerError)?;
         if !vars::is_available(address) {
             return Err(ServerError("Address is already in use".to_string()));
         }
@@ -368,5 +370,27 @@ impl Server {
             "Item successfully deleted",
             warp::http::StatusCode::OK,
         ))
+    }
+
+    /// Transforms rejections into proper server replies.
+    async fn handle_rejection(err: warp::Rejection) -> Result<impl warp::Reply, Infallible> {
+        let message;
+        let code;
+
+        if let Some(_) = err.find::<IOError>() {
+            message = "An IO error occurred on the server";
+            code = warp::http::StatusCode::INTERNAL_SERVER_ERROR;
+        } else if let Some(_) = err.find::<SerializationError>() {
+            message = "A serialization error occurred on the server";
+            code = warp::http::StatusCode::INTERNAL_SERVER_ERROR;
+        } else if let Some(_) = err.find::<TaskNotFound>() {
+            message = "The specified task doesn't exist";
+            code = warp::http::StatusCode::NOT_FOUND;
+        } else {
+            message = "An unknown error occurred. Sorry!";
+            code = warp::http::StatusCode::INTERNAL_SERVER_ERROR;
+        }
+
+        Ok(warp::reply::with_status(message, code))
     }
 }
