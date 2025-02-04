@@ -54,6 +54,11 @@ impl Task {
             completed: false,
         }
     }
+
+    /// Returns this `Task`'s ID
+    pub fn id(&self) -> usize {
+        self.id
+    }
 }
 
 impl std::fmt::Display for Task {
