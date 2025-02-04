@@ -182,10 +182,10 @@ impl Clone for Box<dyn Priority> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ShortestWithUrgency {
     /// How much to prioritize deadlines over durations
-    deadline_weight: i64,
+    pub deadline_weight: i64,
 
     /// How much to prioritize durations over deadlines
-    duration_weight: i64,
+    pub duration_weight: i64,
 }
 
 #[typetag::serde]
