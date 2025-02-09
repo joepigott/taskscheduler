@@ -70,14 +70,15 @@ impl Scheduler {
                 }
             }
 
-            drop(queue);
-
             // if it's been longer than the write timeout, write the contents
             // of the queue to disk
             if start.elapsed() >= Duration::from_secs(60 * write_timeout as u64) {
                 self.save(&storage_path)?;
+                queue.enabled = true; // the `save` method disables for writing
                 start = Instant::now();
             }
+
+            drop(queue);
 
             sleep(Duration::from_millis(timeout as u64));
         }
