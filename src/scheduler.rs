@@ -7,7 +7,7 @@ use std::fs;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::sleep;
-use std::time::Duration;
+use std::time::{Instant, Duration};
 
 /// `Scheduler` handles all task scheduling logic. It will update the active
 /// task based on the queue priority on a fixed timeout.
@@ -32,8 +32,10 @@ impl Scheduler {
         info!("Starting scheduler (disabled)...");
 
         let timeout = vars::scheduler_timeout()?;
+        let write_timeout = vars::write_timeout()?;
         let storage_path = vars::storage_path()?;
 
+        let mut start = Instant::now();
         while !sigterm.load(Ordering::Relaxed) {
             let mut queue = self.tasks.lock()?;
 
@@ -70,18 +72,25 @@ impl Scheduler {
 
             drop(queue);
 
+            // if it's been longer than the write timeout, write the contents
+            // of the queue to disk
+            if start.elapsed() >= Duration::from_secs(60 * write_timeout as u64) {
+                self.save(&storage_path)?;
+                start = Instant::now();
+            }
+
             sleep(Duration::from_millis(timeout as u64));
         }
 
-        info!("Writing data to disk...");
-        self.save(storage_path)?;
+        self.save(&storage_path)?;
         info!("Data written. Exiting...");
 
         Ok(())
     }
 
     /// Serializes and writes the task data to disk.
-    fn save(&self, path: String) -> Result<(), SchedulingError> {
+    fn save(&self, path: &str) -> Result<(), SchedulingError> {
+        info!("Writing data to disk...");
         let mut queue = self.tasks.lock()?;
         queue.enabled = false;
         let data =

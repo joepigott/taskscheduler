@@ -4,6 +4,7 @@ use std::str::FromStr;
 
 const SERV_ADDRESS: &str = "TS_SERVER_ADDR";
 const SCHED_TIMEOUT: &str = "TS_SCHEDULER_TIMEOUT";
+const WRITE_TIMEOUT: &str = "TS_WRITE_TIMEOUT";
 const STORAGE_PATH: &str = "TS_STORAGE_PATH";
 const DF_NAME: &str = "tasks.json";
 
@@ -33,6 +34,18 @@ pub fn scheduler_timeout() -> Result<usize, String> {
             .map_err(|_| format!("{SCHED_TIMEOUT} environment variable is invalid"))?),
         Err(_) => Err(format!(
             "{SCHED_TIMEOUT} environment variable does not exist"
+        )),
+    }
+}
+
+/// Fetches the write timeout environment variable (in minutes) as a `usize`. 
+/// This controls how frequently the scheduler will write its contents to disk.
+pub fn write_timeout() -> Result<usize, String> {
+    match var(WRITE_TIMEOUT) {
+        Ok(timeout) => Ok(usize::from_str(&timeout)
+            .map_err(|_| format!("{WRITE_TIMEOUT} environment variable is invalid"))?),
+        Err(_) => Err(format!(
+            "{WRITE_TIMEOUT} environment variable does not exist"
         )),
     }
 }
