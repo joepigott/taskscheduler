@@ -348,7 +348,14 @@ impl Server {
         queue
             .delete(task.id)
             .map_err(|_| warp::reject::custom(TaskNotFound))?;
-        queue.add_completed(task);
+        let c_task = Task::new(
+            queue.new_id_completed(),
+            task.title,
+            task.deadline,
+            task.duration,
+            task.priority,
+        );
+        queue.add_completed(c_task);
 
         Ok(warp::reply::with_status(
             "Task marked as completed",

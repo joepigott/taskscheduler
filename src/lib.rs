@@ -194,6 +194,14 @@ impl TaskQueue {
         (1..).find(|id| !ids.contains(id)).unwrap()
     }
 
+    /// Finds and returns the lowest unused ID in the completed list.
+    pub fn new_id_completed(&self) -> usize {
+        use std::collections::HashSet;
+
+        let ids: HashSet<usize> = self.completed.iter().map(|t| t.id).collect();
+        (1..).find(|id| !ids.contains(id)).unwrap()
+    }
+
     /// Returns an iterator over the contents of the queue.
     pub fn iter(&self) -> TaskQueueIterator {
         TaskQueueIterator {
