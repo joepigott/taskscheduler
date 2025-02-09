@@ -2,7 +2,7 @@ use crate::error::SchedulingError;
 use crate::vars;
 use crate::{SharedQueue, Task};
 use chrono::TimeDelta;
-use piglog::{error, info};
+use piglog::{error, info, debug};
 use std::fs;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -44,7 +44,7 @@ impl Scheduler {
                 self.active_task = queue.select();
 
                 if let Some(task) = self.active_task.as_mut() {
-                    info!("Active task: {} (ID: {})", task.title, task.id);
+                    debug!("Active task: {} (ID: {})", task.title, task.id);
 
                     // Tasks are marked as completed from outside of this scope, so
                     // we have to check for it on every loop.
@@ -66,25 +66,25 @@ impl Scheduler {
                         }
                     }
                 } else {
-                    info!("No active task.");
+                    debug!("No active task.");
                 }
             }
+
+            drop(queue);
 
             // if it's been longer than the write timeout, write the contents
             // of the queue to disk
             if start.elapsed() >= Duration::from_secs(60 * write_timeout as u64) {
                 self.save(&storage_path)?;
-                queue.enabled = true; // the `save` method disables for writing
                 start = Instant::now();
             }
-
-            drop(queue);
 
             sleep(Duration::from_millis(timeout as u64));
         }
 
+        self.tasks.lock()?.enabled = false;
         self.save(&storage_path)?;
-        info!("Data written. Exiting...");
+        info!("Exiting...");
 
         Ok(())
     }
@@ -92,8 +92,7 @@ impl Scheduler {
     /// Serializes and writes the task data to disk.
     fn save(&self, path: &str) -> Result<(), SchedulingError> {
         info!("Writing data to disk...");
-        let mut queue = self.tasks.lock()?;
-        queue.enabled = false;
+        let queue = self.tasks.lock()?;
         let data =
             serde_json::to_vec(&queue.clone()).map_err(|e| SchedulingError(e.to_string()))?;
         fs::write(path, &data).map_err(|e| SchedulingError(e.to_string()))

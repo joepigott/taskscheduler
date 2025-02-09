@@ -199,7 +199,6 @@ impl Priority for ShortestWithUrgency {
 
                 let score = (deadline_distance.num_seconds() / self.deadline_weight)
                     - (self.duration_weight * t.duration.num_seconds());
-                println!("{score}");
 
                 (t, score)
             })
