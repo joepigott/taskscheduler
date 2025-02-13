@@ -321,7 +321,7 @@ impl Server {
 
         Ok(warp::reply::with_status(
             "Task queue priority successfully updated",
-            warp::http::StatusCode::OK,
+            warp::http::StatusCode::CREATED,
         ))
     }
 
