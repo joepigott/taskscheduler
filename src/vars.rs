@@ -38,7 +38,7 @@ pub fn scheduler_timeout() -> Result<usize, String> {
     }
 }
 
-/// Fetches the write timeout environment variable (in minutes) as a `usize`. 
+/// Fetches the write timeout environment variable (in minutes) as a `usize`.
 /// This controls how frequently the scheduler will write its contents to disk.
 pub fn write_timeout() -> Result<usize, String> {
     match var(WRITE_TIMEOUT) {

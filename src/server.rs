@@ -3,9 +3,9 @@ use crate::priority::Priority;
 use crate::vars;
 use crate::{NaiveTask, SharedQueue, Task, UpdateTask};
 use piglog::{error, info};
+use std::convert::Infallible;
 use std::sync::Arc;
 use warp::Filter;
-use std::convert::Infallible;
 
 /// `Server` handles all communication with clients. This includes waiting for
 /// requests, updating shared resources, and sending responses.

@@ -2,12 +2,12 @@ use crate::error::SchedulingError;
 use crate::vars;
 use crate::{SharedQueue, Task};
 use chrono::TimeDelta;
-use piglog::{error, info, debug};
+use piglog::{debug, error, info};
 use std::fs;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::sleep;
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 
 /// `Scheduler` handles all task scheduling logic. It will update the active
 /// task based on the queue priority on a fixed timeout.

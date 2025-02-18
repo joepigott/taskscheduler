@@ -76,7 +76,7 @@ impl Priority for Deadline {
 /// Schedules tasks in order of increasing duration: short tasks are scheduled
 /// ahead of long tasks.
 #[derive(Clone, Serialize, Deserialize)]
-pub struct Shortest {}
+pub struct Shortest;
 
 #[typetag::serde]
 impl Priority for Shortest {
@@ -96,7 +96,7 @@ impl Priority for Shortest {
 /// Schedules tasks in order of decreasing duration: long tasks are scheduled
 /// ahead of short tasks.
 #[derive(Clone, Serialize, Deserialize)]
-pub struct Longest {}
+pub struct Longest;
 
 #[typetag::serde]
 impl Priority for Longest {
@@ -116,7 +116,7 @@ impl Priority for Longest {
 /// Schedules tasks in order of decreasing priority: higher priority tasks are
 /// scheduled ahead of lower priority tasks.
 #[derive(Clone, Serialize, Deserialize)]
-pub struct HighestPriority {}
+pub struct HighestPriority;
 
 #[typetag::serde]
 impl Priority for HighestPriority {
@@ -138,7 +138,7 @@ impl Priority for HighestPriority {
 ///
 /// Use this priority if you hate yourself and want to feel busy.
 #[derive(Clone, Serialize, Deserialize)]
-pub struct LowestPriority {}
+pub struct LowestPriority;
 
 #[typetag::serde]
 impl Priority for LowestPriority {
