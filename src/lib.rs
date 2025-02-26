@@ -1,6 +1,8 @@
 use chrono::{Duration, NaiveDateTime};
 use priority::{Deadline, Priority};
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
+use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 pub mod error;
@@ -8,6 +10,43 @@ pub mod priority;
 pub mod scheduler;
 pub mod server;
 pub mod vars;
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub enum PriorityLevel {
+    Urgent,
+    High,
+    Normal,
+    Low,
+}
+
+impl Display for PriorityLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                PriorityLevel::Urgent => "Urgent",
+                PriorityLevel::High => "High",
+                PriorityLevel::Normal => "Normal",
+                PriorityLevel::Low => "Low",
+            }
+        )
+    }
+}
+
+impl FromStr for PriorityLevel {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "urgent" => Ok(PriorityLevel::Urgent),
+            "high" => Ok(PriorityLevel::High),
+            "normal" => Ok(PriorityLevel::Normal),
+            "low" => Ok(PriorityLevel::Low),
+            _ => Err("Unknown priority level".to_string()),
+        }
+    }
+}
 
 /// `Task` contains information about a single task, including its ID, title,
 /// deadline, duration, and priority.
@@ -17,7 +56,7 @@ pub struct Task {
     pub title: String,
     pub deadline: NaiveDateTime,
     pub duration: Duration,
-    pub priority: u8,
+    pub priority: PriorityLevel,
     pub active: bool,
     pub completed: bool,
 }
@@ -29,7 +68,7 @@ impl Task {
         title: String,
         deadline: NaiveDateTime,
         duration: Duration,
-        priority: u8,
+        priority: PriorityLevel,
     ) -> Self {
         Self {
             id,
@@ -85,12 +124,17 @@ pub struct NaiveTask {
     pub title: String,
     pub deadline: NaiveDateTime,
     pub duration: Duration,
-    pub priority: u8,
+    pub priority: PriorityLevel,
 }
 
 impl NaiveTask {
     /// Creates a new `NaiveTask` with the provided information.
-    pub fn new(title: String, deadline: NaiveDateTime, duration: Duration, priority: u8) -> Self {
+    pub fn new(
+        title: String,
+        deadline: NaiveDateTime,
+        duration: Duration,
+        priority: PriorityLevel,
+    ) -> Self {
         Self {
             title,
             deadline,
@@ -108,7 +152,7 @@ pub struct UpdateTask {
     pub title: Option<String>,
     pub deadline: Option<NaiveDateTime>,
     pub duration: Option<Duration>,
-    pub priority: Option<u8>,
+    pub priority: Option<PriorityLevel>,
 }
 
 impl UpdateTask {
@@ -143,7 +187,7 @@ impl UpdateTask {
     }
 
     /// Adds a priority to the `UpdateTask` and returns it.
-    pub fn with_priority(mut self, priority: Option<u8>) -> Self {
+    pub fn with_priority(mut self, priority: Option<PriorityLevel>) -> Self {
         self.priority = priority;
         self
     }
@@ -359,7 +403,7 @@ mod test {
                 format!("Task {i}"),
                 NaiveDateTime::parse_from_str("01/10/2025 01:00 am", "%m/%d/%Y %M:%H %P").unwrap(),
                 Duration::zero(),
-                1,
+                PriorityLevel::Normal,
             );
             queue.add(task);
         }

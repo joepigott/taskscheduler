@@ -7,13 +7,26 @@ use serde::{Deserialize, Serialize};
 /// the `select()` method should **ignore tasks that are flagged as complete**.
 ///
 /// ## Example: `FIFO`
-///
 /// ```rust
-/// pub struct FIFO {}
+/// use serde::{Serialize, Deserialize};
+/// use taskscheduler::priority::Priority;
+/// use taskscheduler::Task;
 ///
+/// #[derive(Clone, Serialize, Deserialize)]
+/// pub struct FIFO;
+///
+/// #[typetag::serde]
 /// impl Priority for FIFO {
 ///     fn select(&self, queue: &[Task]) -> Option<Task> {
-///         queue.first().cloned()
+///         queue.iter().find(|t| !t.completed).cloned()
+///     }
+///
+///     fn string(&self) -> String {
+///         "FIFO".to_string()
+///     }
+///
+///     fn clone_box(&self) -> Box<dyn Priority> {
+///         Box::new(self.clone())
 ///     }
 /// }
 /// ```
@@ -21,13 +34,8 @@ use serde::{Deserialize, Serialize};
 /// ## `clone_box()`
 ///
 /// The `clone_box()` method is required to satisfy the trait bounds for
-/// trait object serialization and deserialization. The following
-/// implementation will work just fine:
-/// ```rust
-/// fn clone_box(&self) -> Box<dyn Priority> {
-///     Box::new(self.clone())
-/// }
-/// ```
+/// trait object serialization and deserialization. The above implementation
+/// will work just fine; it's not recommended to get fancy with it.
 #[typetag::serde(tag = "type")]
 pub trait Priority: Send + Sync {
     fn select(&self, queue: &[Task]) -> Option<Task>;
@@ -162,7 +170,7 @@ impl Clone for Box<dyn Priority> {
 }
 
 /// A score is calculated for each task based on the following formula:
-/// ```rust
+/// ```ignore
 /// let score = (deadline_weight * (deadline - now)) - (duration_weight * duration)
 /// ```
 /// The lowest score gets scheduled.
@@ -176,9 +184,9 @@ impl Clone for Box<dyn Priority> {
 ///
 /// ## Parameters
 /// - `deadline_weight` - Determines the impact of deadlines on the score. A
-/// higher value will effectively prioritize tasks that have closer deadlines.
+///   higher value will effectively prioritize tasks that have closer deadlines.
 /// - `duration_weight` - Determines the (negative) impact of durations on the
-/// score. A higher value will prioritize tasks that have shorter durations.
+///   score. A higher value will prioritize tasks that have shorter durations.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ShortestWithUrgency {
     /// How much to prioritize deadlines over durations
@@ -219,7 +227,7 @@ impl Priority for ShortestWithUrgency {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{Task, TaskQueue};
+    use crate::{PriorityLevel, Task, TaskQueue};
     use chrono::Duration;
 
     #[test]
@@ -236,21 +244,21 @@ mod test {
             "task 1".to_string(),
             now + Duration::hours(2),
             Duration::minutes(30),
-            0,
+            PriorityLevel::Normal,
         );
         let task2 = Task::new(
             2,
             "task 2".to_string(),
             now + Duration::hours(8),
             Duration::hours(4),
-            0,
+            PriorityLevel::Normal,
         );
         let task3 = Task::new(
             3,
             "task 3".to_string(),
             now - Duration::hours(1),
             Duration::minutes(10),
-            0,
+            PriorityLevel::Normal,
         );
 
         queue.add(task1.clone());
@@ -281,14 +289,14 @@ mod test {
             "task 1".to_string(),
             now + Duration::hours(4),
             Duration::hours(4),
-            1,
+            PriorityLevel::High,
         );
         let task2 = Task::new(
             2,
             "task 2".to_string(),
             now + Duration::hours(8),
             Duration::hours(8),
-            5,
+            PriorityLevel::Low,
         );
 
         queue.add(task1.clone());

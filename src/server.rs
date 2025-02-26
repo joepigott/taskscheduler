@@ -384,13 +384,13 @@ impl Server {
         let message;
         let code;
 
-        if let Some(_) = err.find::<IOError>() {
+        if err.find::<IOError>().is_some() {
             message = "An IO error occurred on the server";
             code = warp::http::StatusCode::INTERNAL_SERVER_ERROR;
-        } else if let Some(_) = err.find::<SerializationError>() {
+        } else if err.find::<SerializationError>().is_some() {
             message = "A serialization error occurred on the server";
             code = warp::http::StatusCode::INTERNAL_SERVER_ERROR;
-        } else if let Some(_) = err.find::<TaskNotFound>() {
+        } else if err.find::<TaskNotFound>().is_some() {
             message = "The specified task doesn't exist";
             code = warp::http::StatusCode::NOT_FOUND;
         } else {
