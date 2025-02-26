@@ -339,6 +339,12 @@ impl TaskQueue {
             Err(error::TaskNotFound)
         }
     }
+
+    /// Returns `true` if there are no tasks in the queue, and `false` if there
+    /// is at least one.
+    pub fn is_empty(&self) -> bool {
+        self.tasks.is_empty()
+    }
 }
 
 impl Default for TaskQueue {

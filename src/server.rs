@@ -199,12 +199,16 @@ impl Server {
 
         let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
 
-        match serde_json::to_vec(&queue.clone()) {
-            Ok(data) => Ok(warp::reply::with_status(data, warp::http::StatusCode::OK)),
-            Err(e) => {
-                error!("{e}");
-                Err(warp::reject::custom(SerializationError))
+        if !queue.is_empty() {
+            match serde_json::to_vec(&queue.clone()) {
+                Ok(data) => Ok(warp::reply::with_status(data, warp::http::StatusCode::OK)),
+                Err(e) => {
+                    error!("{e}");
+                    Err(warp::reject::custom(SerializationError))
+                }
             }
+        } else {
+            Err(warp::reject::custom(TaskNotFound))
         }
     }
 
