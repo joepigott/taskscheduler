@@ -57,8 +57,6 @@ pub struct Task {
     pub deadline: NaiveDateTime,
     pub duration: Duration,
     pub priority: PriorityLevel,
-    pub active: bool,
-    pub completed: bool,
 }
 
 impl Task {
@@ -76,8 +74,6 @@ impl Task {
             deadline,
             duration,
             priority,
-            active: false,
-            completed: false,
         }
     }
 
@@ -89,8 +85,6 @@ impl Task {
             deadline: task.deadline,
             duration: task.duration,
             priority: task.priority,
-            active: false,
-            completed: false,
         }
     }
 
@@ -104,8 +98,7 @@ impl std::fmt::Display for Task {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{}{} - {}\n\tDeadline: {}\n\tTime Remaining: {} hours\n\tPriority: {}\n",
-            if self.active { " * " } else { "   " },
+            "{} - {}\n\tDeadline: {}\n\tTime Remaining: {} hours\n\tPriority: {}\n",
             self.id,
             self.title,
             self.deadline,

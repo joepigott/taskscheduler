@@ -46,23 +46,16 @@ impl Scheduler {
                 if let Some(task) = self.active_task.as_mut() {
                     debug!("Active task: {} (ID: {})", task.title, task.id);
 
-                    // Tasks are marked as completed from outside of this scope, so
-                    // we have to check for it on every loop.
-                    if task.completed {
-                        queue.delete(task.id)?;
-                        queue.add_completed(task.clone());
-                    } else {
-                        let task_mut = queue.get_mut(task.id).ok_or(SchedulingError(
-                            "Active task is not in the queue.".to_string(),
-                        ))?;
-                        match task_mut
-                            .duration
-                            .checked_sub(&TimeDelta::milliseconds(timeout as i64))
-                        {
-                            Some(duration) => task_mut.duration = duration,
-                            None => {
-                                error!("Task duration overflowed! Something is seriously wrong.");
-                            }
+                    let task_mut = queue.get_mut(task.id).ok_or(SchedulingError(
+                        "Active task is not in the queue.".to_string(),
+                    ))?;
+                    match task_mut
+                        .duration
+                        .checked_sub(&TimeDelta::milliseconds(timeout as i64))
+                    {
+                        Some(duration) => task_mut.duration = duration,
+                        None => {
+                            error!("Task duration overflowed! Something is seriously wrong.");
                         }
                     }
                 } else {

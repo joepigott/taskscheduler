@@ -50,7 +50,7 @@ pub struct FIFO;
 #[typetag::serde]
 impl Priority for FIFO {
     fn select(&self, queue: &[Task]) -> Option<Task> {
-        queue.iter().find(|t| !t.completed).cloned()
+        queue.first().cloned()
     }
 
     fn string(&self) -> String {
