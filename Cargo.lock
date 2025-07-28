@@ -119,7 +119,7 @@ dependencies = [
 [[package]]
 name = "color"
 version = "0.2.0"
-source = "git+https://git.pigroy.xyz/pigroy/color.git#7a84e80b7bb19fb0822b280cab373758e79e835d"
+source = "git+https://git.joepigott.dev/pigroy/color.git#7a84e80b7bb19fb0822b280cab373758e79e835d"
 
 [[package]]
 name = "core-foundation-sys"
@@ -707,8 +707,8 @@ checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
 
 [[package]]
 name = "piglog"
-version = "0.1.0"
-source = "git+https://git.pigroy.xyz/pigroy/piglog.git#7669ffea69c458d6dc16c977ad6d369a17edf96f"
+version = "0.1.1"
+source = "git+https://git.joepigott.dev/pigroy/piglog.git#b6703ec7a83c71da57b8fb40dbec7eddc91c8a1d"
 dependencies = [
  "chrono",
  "color",

@@ -3,8 +3,8 @@
 Task Scheduler does what it says: it schedules tasks. This repository contains
 the shared resources required by the client and server, as well as some
 runtime-agnostic server implementation. I've also written reference 
-implementations for the [client](https://git.pigroy.xyz/pigroy/tasks.git) and
-[server](https://git.pigroy.xyz/pigroy/tsserver.git).
+implementations for the [client](https://github.com/joepigott/tasks) and
+[server](https://github.com/joepigott/tasksd).
 
 ## Roadmap
 
