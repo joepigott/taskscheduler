@@ -3,9 +3,19 @@ use crate::priority::Priority;
 use crate::vars;
 use crate::{NaiveTask, SharedQueue, Task, UpdateTask};
 use piglog::{error, info};
+use serde::Deserialize;
 use std::convert::Infallible;
+use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::sync::Arc;
 use warp::Filter;
+
+#[derive(Deserialize)]
+pub struct ServerConfig {
+    pub address: SocketAddr,
+    pub cert_path: PathBuf,
+    pub key_path: PathBuf,
+}
 
 /// `Server` handles all communication with clients. This includes waiting for
 /// requests, updating shared resources, and sending responses.
@@ -24,7 +34,7 @@ impl Server {
     /// Spawns a new thread and begin listening for requests. This thread does
     /// *not* exit gracefully as it has no cleanup, so you should exit the
     /// thread forcibly through whatever async runtime you're using.
-    pub async fn run(&mut self) -> Result<(), ServerError> {
+    pub async fn run(&mut self, config: ServerConfig) -> Result<(), ServerError> {
         info!("Starting server...");
 
         let tasks: SharedQueue = Arc::clone(&self.tasks);
@@ -143,13 +153,16 @@ impl Server {
             .or(del_complete)
             .recover(Self::handle_rejection);
 
-        let address = vars::server_address().map_err(ServerError)?;
-        if !vars::is_available(address) {
+        if !vars::is_available(config.address) {
             return Err(ServerError("Address is already in use".to_string()));
         }
 
-        info!("Server listening on {address}");
-        warp::serve(routes).run(address).await;
+        info!("Server listening on {}", config.address);
+        warp::serve(routes)
+            .tls()
+            .cert_path(config.cert_path)
+            .key_path(config.key_path)
+            .run(config.address).await;
 
         Ok(())
     }

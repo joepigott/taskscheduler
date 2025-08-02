@@ -1,13 +1,21 @@
 use crate::error::SchedulingError;
-use crate::vars;
 use crate::{SharedQueue, Task};
 use chrono::TimeDelta;
 use piglog::{debug, error, info};
+use serde::Deserialize;
 use std::fs;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
+
+#[derive(Deserialize)]
+pub struct SchedulerConfig {
+    pub data_path: PathBuf,
+    pub write_timeout: usize,
+    pub scheduler_timeout: usize,
+}
 
 /// `Scheduler` handles all task scheduling logic. It will update the active
 /// task based on the queue priority on a fixed timeout.
@@ -28,12 +36,8 @@ impl Scheduler {
     /// Updates the scheduling logic on a timed loop. The `sigterm` parameter
     /// should be set to `true` when the program exits, at which point all data
     /// will be serialized and written to disk.
-    pub async fn run(&mut self, sigterm: Arc<AtomicBool>) -> Result<(), SchedulingError> {
+    pub async fn run(&mut self, sigterm: Arc<AtomicBool>, config: SchedulerConfig) -> Result<(), SchedulingError> {
         info!("Starting scheduler (disabled)...");
-
-        let timeout = vars::scheduler_timeout()?;
-        let write_timeout = vars::write_timeout()?;
-        let storage_path = vars::storage_path()?;
 
         let mut start = Instant::now();
         while !sigterm.load(Ordering::Relaxed) {
@@ -51,7 +55,7 @@ impl Scheduler {
                     ))?;
                     match task_mut
                         .duration
-                        .checked_sub(&TimeDelta::milliseconds(timeout as i64))
+                        .checked_sub(&TimeDelta::milliseconds(config.scheduler_timeout as i64))
                     {
                         Some(duration) => task_mut.duration = duration,
                         None => {
@@ -67,23 +71,23 @@ impl Scheduler {
 
             // if it's been longer than the write timeout, write the contents
             // of the queue to disk
-            if start.elapsed() >= Duration::from_secs(60 * write_timeout as u64) {
-                self.save(&storage_path)?;
+            if start.elapsed() >= Duration::from_secs(60 * config.write_timeout as u64) {
+                self.save(&config.data_path)?;
                 start = Instant::now();
             }
 
-            sleep(Duration::from_millis(timeout as u64));
+            sleep(Duration::from_millis(config.scheduler_timeout as u64));
         }
 
         self.tasks.lock()?.enabled = false;
-        self.save(&storage_path)?;
+        self.save(&config.data_path)?;
         info!("Exiting...");
 
         Ok(())
     }
 
     /// Serializes and writes the task data to disk.
-    fn save(&self, path: &str) -> Result<(), SchedulingError> {
+    fn save(&self, path: &PathBuf) -> Result<(), SchedulingError> {
         info!("Writing data to disk...");
         let queue = self.tasks.lock()?;
         let data =
