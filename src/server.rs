@@ -6,14 +6,24 @@ use piglog::{error, info};
 use serde::Deserialize;
 use std::convert::Infallible;
 use std::net::SocketAddr;
-use std::path::PathBuf;
 use std::sync::Arc;
 use warp::Filter;
 
+#[cfg(feature = "https")]
+use std::path::PathBuf;
+
+/// Server configuration fields defined by the user
 #[derive(Deserialize)]
 pub struct ServerConfig {
+    /// The address to serve over
     pub address: SocketAddr,
+
+    /// The path to the tls certificate (https only)
+    #[cfg(feature = "https")]
     pub cert_path: PathBuf,
+
+    /// The path to the tls private key (https only)
+    #[cfg(feature = "https")]
     pub key_path: PathBuf,
 }
 
@@ -158,11 +168,15 @@ impl Server {
         }
 
         info!("Server listening on {}", config.address);
+        #[cfg(feature = "https")]
         warp::serve(routes)
             .tls()
             .cert_path(config.cert_path)
             .key_path(config.key_path)
             .run(config.address).await;
+
+        #[cfg(not(feature = "https"))]
+        warp::serve(routes).run(config.address).await;
 
         Ok(())
     }
