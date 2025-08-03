@@ -1,5 +1,7 @@
 [package]
 name = "taskscheduler"
+authors = ["Joe Pigott <joe@joepigott.dev>"]
+description = "A smart todo list that applies CPU scheduling logic to organize your tasks"
 version = "0.1.2"
 edition = "2021"
 
