@@ -6,12 +6,6 @@ runtime-agnostic server implementation. I've also written reference
 implementations for the [client](https://github.com/joepigott/tasks) and
 [server](https://github.com/joepigott/tasksd).
 
-## Roadmap
-
-The current #1 priority is authentication and support for `https`. I will try
-my best to get this implemented as soon as possible, but I am a student so 
-there will likely be delays.
-
 ## Motivation
 
 Upon finishing a college course in operating systems, I realized that I am
@@ -21,10 +15,6 @@ Hopefully this takes away some mental overhead, and allows one to focus on the
 actual task rather than stress about getting multiple things done.
 
 ## API
-
-*NOTE: there is currently **no authentication or encryption** for communicating
-with the server. All requests are made over plain http. Security is currently
-the main focus for the next release.*
 
 The API endpoints are as follows:
 
