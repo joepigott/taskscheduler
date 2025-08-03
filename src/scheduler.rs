@@ -10,10 +10,18 @@ use std::sync::Arc;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
+/// Scheduler configuration values defined by the user or system
 #[derive(Deserialize)]
 pub struct SchedulerConfig {
+    /// The file to contain task data
     pub data_path: PathBuf,
+
+    /// The write timeout in minutes (how often the tasks will be written to 
+    /// disk)
     pub write_timeout: usize,
+
+    /// The scheduler timeout in milliseconds (how often the tasks will be
+    /// updated)
     pub scheduler_timeout: usize,
 }
 
