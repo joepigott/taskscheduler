@@ -2,7 +2,7 @@
 name = "taskscheduler"
 authors = ["Joe Pigott <joe@joepigott.dev>"]
 description = "A smart todo list that applies CPU scheduling logic to organize your tasks"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
