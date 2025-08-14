@@ -214,7 +214,7 @@ impl Server {
         queue.add(task);
 
         Ok(warp::reply::with_status(
-            "Item successfully added",
+            warp::reply::json(&"Item successfully added"),
             warp::http::StatusCode::CREATED,
         ))
     }
@@ -228,7 +228,10 @@ impl Server {
 
         if !queue.is_empty() {
             match serde_json::to_vec(&queue.clone()) {
-                Ok(data) => Ok(warp::reply::with_status(data, warp::http::StatusCode::OK)),
+                Ok(data) => Ok(warp::reply::with_status(
+                    warp::reply::json(&data), 
+                    warp::http::StatusCode::OK)
+                ),
                 Err(e) => {
                     error!("{e}");
                     Err(warp::reject::custom(SerializationError))
@@ -271,7 +274,7 @@ impl Server {
         }
 
         Ok(warp::reply::with_status(
-            "Item successfully updated",
+            warp::reply::json(&"Item successfully updated"),
             warp::http::StatusCode::CREATED,
         ))
     }
@@ -287,7 +290,7 @@ impl Server {
         queue.delete(id)?;
 
         Ok(warp::reply::with_status(
-            "Item successfully deleted",
+            warp::reply::json(&"Item successfully deleted"),
             warp::http::StatusCode::OK,
         ))
     }
@@ -300,7 +303,7 @@ impl Server {
         queue.enabled = true;
 
         Ok(warp::reply::with_status(
-            "Scheduler successfully enabled",
+            warp::reply::json(&"Scheduler successfully enabled"),
             warp::http::StatusCode::OK,
         ))
     }
@@ -313,7 +316,7 @@ impl Server {
         queue.enabled = false;
 
         Ok(warp::reply::with_status(
-            "Scheduler successfully disabled",
+            warp::reply::json(&"Scheduler successfully disabled"),
             warp::http::StatusCode::OK,
         ))
     }
@@ -325,7 +328,7 @@ impl Server {
         let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
         if let Some(task) = queue.select() {
             let data = serde_json::to_vec(&task).map_err(|_| warp::reject::custom(IOError))?;
-            Ok(warp::reply::with_status(data, warp::http::StatusCode::OK))
+            Ok(warp::reply::with_status(warp::reply::json(&data), warp::http::StatusCode::OK))
         } else {
             Err(warp::reject::custom(TaskNotFound))
         }
@@ -337,7 +340,7 @@ impl Server {
 
         let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
         let data = serde_json::to_vec(&queue.enabled).map_err(|_| warp::reject::custom(IOError))?;
-        Ok(warp::reply::with_status(data, warp::http::StatusCode::OK))
+        Ok(warp::reply::with_status(warp::reply::json(&data), warp::http::StatusCode::OK))
     }
 
     /// Applies the provided priority to the task queue.
@@ -351,7 +354,7 @@ impl Server {
         queue.priority = priority;
 
         Ok(warp::reply::with_status(
-            "Task queue priority successfully updated",
+            warp::reply::json(&"Task queue priority successfully updated"),
             warp::http::StatusCode::CREATED,
         ))
     }
@@ -364,7 +367,7 @@ impl Server {
         let reply = serde_json::to_string(&queue.priority)
             .map_err(|_| warp::reject::custom(SerializationError))?;
 
-        Ok(warp::reply::with_status(reply, warp::http::StatusCode::OK))
+        Ok(warp::reply::with_status(warp::reply::json(&reply), warp::http::StatusCode::OK))
     }
 
     /// Marks the task with the given ID as complete.
@@ -389,7 +392,7 @@ impl Server {
         queue.add_completed(c_task);
 
         Ok(warp::reply::with_status(
-            "Task marked as completed",
+            warp::reply::json(&"Task marked as completed"),
             warp::http::StatusCode::OK,
         ))
     }
@@ -405,7 +408,7 @@ impl Server {
         queue.delete_completed(id)?;
 
         Ok(warp::reply::with_status(
-            "Item successfully deleted",
+            warp::reply::json(&"Item successfully deleted"),
             warp::http::StatusCode::OK,
         ))
     }
@@ -429,6 +432,6 @@ impl Server {
             code = warp::http::StatusCode::INTERNAL_SERVER_ERROR;
         }
 
-        Ok(warp::reply::with_status(message, code))
+        Ok(warp::reply::with_status(warp::reply::json(&message), code))
     }
 }
