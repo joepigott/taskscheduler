@@ -77,8 +77,7 @@ impl Server {
         let delete = warp::delete()
             .and(warp::path("api"))
             .and(warp::path("tasks"))
-            .and(warp::path::end())
-            .and(Self::id_json())
+            .and(warp::path::param())
             .and(filter.clone())
             .and_then(Self::delete_task);
 
@@ -428,6 +427,7 @@ impl Server {
             message = "The specified task doesn't exist";
             code = warp::http::StatusCode::NOT_FOUND;
         } else {
+            piglog::error!("Critical: {:?}", err);
             message = "An unknown error occurred. Sorry!";
             code = warp::http::StatusCode::INTERNAL_SERVER_ERROR;
         }
