@@ -134,8 +134,7 @@ impl Server {
             .and(warp::path("api"))
             .and(warp::path("tasks"))
             .and(warp::path("complete"))
-            .and(warp::path::end())
-            .and(Self::id_json())
+            .and(warp::path::param())
             .and(filter.clone())
             .and_then(Self::complete);
 
@@ -143,8 +142,7 @@ impl Server {
             .and(warp::path("api"))
             .and(warp::path("tasks"))
             .and(warp::path("complete"))
-            .and(warp::path::end())
-            .and(Self::id_json())
+            .and(warp::path::param())
             .and(filter.clone())
             .and_then(Self::del_complete);
 
@@ -190,11 +188,6 @@ impl Server {
         warp::body::content_length_limit(1024 * 16).and(warp::body::json())
     }
 
-    /// Extracts an ID as a `usize` from a `DELETE` request.
-    fn id_json() -> impl Filter<Extract = (usize,), Error = warp::Rejection> + Clone {
-        warp::body::content_length_limit(1024 * 16).and(warp::body::json())
-    }
-
     /// Extracts a `Box<dyn Priority>` from a `PUT` request.
     fn priority_json(
     ) -> impl Filter<Extract = (Box<dyn Priority>,), Error = warp::Rejection> + Clone {
@@ -226,16 +219,10 @@ impl Server {
         let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
 
         if !queue.is_empty() {
-            match serde_json::to_vec(&queue.clone()) {
-                Ok(data) => Ok(warp::reply::with_status(
-                    warp::reply::json(&data), 
-                    warp::http::StatusCode::OK)
-                ),
-                Err(e) => {
-                    error!("{e}");
-                    Err(warp::reject::custom(SerializationError))
-                }
-            }
+            Ok(warp::reply::with_status(
+                warp::reply::json(&queue.clone()),
+                warp::http::StatusCode::OK
+            ))
         } else {
             Err(warp::reject::custom(TaskNotFound))
         }
@@ -326,8 +313,7 @@ impl Server {
 
         let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
         if let Some(task) = queue.select() {
-            let data = serde_json::to_vec(&task).map_err(|_| warp::reject::custom(IOError))?;
-            Ok(warp::reply::with_status(warp::reply::json(&data), warp::http::StatusCode::OK))
+            Ok(warp::reply::with_status(warp::reply::json(&task), warp::http::StatusCode::OK))
         } else {
             Err(warp::reject::custom(TaskNotFound))
         }
@@ -338,8 +324,7 @@ impl Server {
         info!("Fetching scheduler status");
 
         let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
-        let data = serde_json::to_vec(&queue.enabled).map_err(|_| warp::reject::custom(IOError))?;
-        Ok(warp::reply::with_status(warp::reply::json(&data), warp::http::StatusCode::OK))
+        Ok(warp::reply::with_status(warp::reply::json(&queue.enabled), warp::http::StatusCode::OK))
     }
 
     /// Applies the provided priority to the task queue.
@@ -363,10 +348,8 @@ impl Server {
         info!("Fetching scheduler priority");
 
         let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
-        let reply = serde_json::to_string(&queue.priority)
-            .map_err(|_| warp::reject::custom(SerializationError))?;
 
-        Ok(warp::reply::with_status(warp::reply::json(&reply), warp::http::StatusCode::OK))
+        Ok(warp::reply::with_status(warp::reply::json(&queue.priority), warp::http::StatusCode::OK))
     }
 
     /// Marks the task with the given ID as complete.
