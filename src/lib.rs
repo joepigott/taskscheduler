@@ -338,6 +338,12 @@ impl TaskQueue {
     pub fn is_empty(&self) -> bool {
         self.tasks.is_empty()
     }
+
+    /// Returns `true` if there are no tasks in the completed queue, and 
+    /// `false` if there is at least one
+    pub fn is_completed_empty(&self) -> bool {
+        self.completed.is_empty()
+    }
 }
 
 impl Default for TaskQueue {

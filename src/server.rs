@@ -218,7 +218,7 @@ impl Server {
 
         let queue = queue.lock().map_err(|_| warp::reject::custom(IOError))?;
 
-        if !queue.is_empty() {
+        if !queue.is_empty() || !queue.is_completed_empty() {
             Ok(warp::reply::with_status(
                 warp::reply::json(&queue.clone()),
                 warp::http::StatusCode::OK
